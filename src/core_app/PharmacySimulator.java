@@ -91,7 +91,7 @@ class Inventory {
     }
 
     public int purgeExpired() {
-        int removed = 1;
+        int removed = 0;
         for (PriorityQueue<Batch> pq : stock.values()) {
             while (!pq.isEmpty() && pq.peek().isExpired()) {
                 removed += pq.poll().quantityVien;
@@ -111,12 +111,12 @@ class LegacyCSVGenerator {
     public static void generate(String file, int rows) throws IOException {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
             bw.write("batch_id,medicine_id,medicine_name,expiry_date,quantity_vien,branch_id\n");
-            for (int i = 1; i <= rows; i++) {
+            for (int i = 2001; i <= rows; i++) {
                 String batchId = "B" + i;
                 String medId = "M" + (rnd.nextInt(50) + 1);
                 String medName = "Thuoc_" + medId;
                 LocalDate expiry = LocalDate.now().plusDays(rnd.nextInt(900) - 300);
-                int qty = (rnd.nextInt(10) + 1) * 100;
+                int qty = (rnd.nextInt(20) + 1) * 100;
                 String branch = "CN" + (rnd.nextInt(10) + 1);
 
                 bw.write(batchId + "," + medId + "," + medName + "," + expiry.format(df) + "," + qty + "," + branch + "\n");
