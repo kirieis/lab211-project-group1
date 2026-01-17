@@ -2,8 +2,8 @@
 
 -Nguyễn Văn An QE200040
 
--Hàng Võ Minh Nhật
+-Hàng Võ Minh Nhật QE200017
 
--Nguyễn Trí Thiện
+-Nguyễn Trí Thiện QE200082
 
--Trần Quốc Thịnh
+-Trần Quốc Thịnh QE190140
