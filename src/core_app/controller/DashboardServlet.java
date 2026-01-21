@@ -1,5 +1,8 @@
-package src.core_app.controller;
+@WebServlet("/dashboard")
+public class DashboardServlet extends HttpServlet {
 
-public class DashboardServlet {
-    
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        req.getRequestDispatcher("dashboard.jsp").forward(req, resp);
+    }
 }
