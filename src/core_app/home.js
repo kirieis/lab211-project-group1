@@ -26,6 +26,8 @@ function formatVND(n) {
 }
 
 function clampNumber(val) {
+  // Return null for empty string or undefined/null values
+  if (val === "" || val === null || val === undefined) return null;
   const num = Number(val);
   return Number.isFinite(num) ? num : null;
 }
