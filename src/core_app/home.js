@@ -90,7 +90,7 @@ function hashString(s) {
 // Load từ file legacy_batches.csv trong thư mục data
 async function loadProducts() {
   try {
-    const res = await fetch("../data/legacy_batches.csv", { cache: "no-store" });
+    const res = await fetch("../../data/legacy_batches.csv", { cache: "no-store" });
     if (!res.ok) throw new Error("No CSV");
     const text = await res.text();
     const lines = text.split("\n");
