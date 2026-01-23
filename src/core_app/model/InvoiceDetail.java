@@ -1,3 +1,4 @@
+package core_app.model;
 public class InvoiceDetail {
 
     private int invoiceDetailId;
