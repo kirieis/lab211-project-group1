@@ -49,5 +49,12 @@
         </dependency>
 
     </dependencies>
+<!--
+“Đây là một dự án Web Java (WAR) tên là pharmacy-system,
+viết bằng Java 17,
+dùng Servlet (Jakarta),
+kết nối SQL Server bằng JDBC,
+build bằng Maven,
+và deploy lên server như Tomcat.”-->
 
 </project>
