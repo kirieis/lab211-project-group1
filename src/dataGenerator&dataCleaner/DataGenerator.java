@@ -19,6 +19,12 @@ public class DataGenerator {
                 "Cefdinir 300mg",
                 "SkillMax Ocavill",
                 "Siro Ginkid ZinC",
+                "Echina Kingphar",
+                "Panadol Extra",
+                "Efferalgan 500mg",
+                "Hapacol 650",
+                "Alphachoay",
+                "Augmentin 625mg",
         };
 
         Random r = new Random();
