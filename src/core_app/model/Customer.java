@@ -25,7 +25,6 @@ public class Customer {
         this.role = role;
     }
 
-    // ===== Getter & Setter =====
 
     public int getCustomerId() {
         return customerId;
