@@ -177,9 +177,9 @@ public class DataGenerator {
     } else if (name.contains("Augmentin")) {
         basePrice = 2400;
     } else if (dosageForm.equals("Syrup")) {
-        basePrice = 50000;
+        basePrice = 5000;
     } else {
-        basePrice = 20000;
+        basePrice = 8500;
     }
 
             String expiry = error ? "invalid-date"
