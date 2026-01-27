@@ -23,7 +23,14 @@ GO
 CREATE TABLE Medicine (
     medicine_id VARCHAR(20) PRIMARY KEY,
     name NVARCHAR(100) NOT NULL,
-    batch VARCHAR(100),
+    batch VARCHAR(250),
+    ingredient NVARCHAR(100),
+    dosage_form NVARCHAR(50),
+    strength NVARCHAR(20),
+    unit NVARCHAR(10),
+    manufacturer NVARCHAR(100),
+    price DECIMAL(12,2),
+    requires_prescription BIT,
     expiry DATE,
     quantity INT CHECK (quantity >= 0)
 );
