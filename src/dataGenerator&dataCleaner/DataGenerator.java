@@ -41,10 +41,16 @@ public class DataGenerator {
         Random r = new Random();
 
         for (int i = 1; i <= 15000; i++) {
-            boolean error = r.nextInt(100) < 8;
+            boolean errorid = r.nextInt(100) < 8;
+            boolean errorname = r.nextInt(100) < 8;
+            boolean errorbatch = r.nextInt(100) < 8;
+            boolean erroringredient = r.nextInt(100) < 8;
+            boolean errorexpiry = r.nextInt(100) < 8;
+            boolean errorqty = r.nextInt(100) < 8;
+            boolean errorddosage = r.nextInt(100) < 8;
 
-            String id = error ? "" : "MED" + i;
-            String name = error ? "###" : medicines[r.nextInt(medicines.length)];
+            String id = errorid ? "" : "MED" + i;
+            String name = errorname ? "###" : medicines[r.nextInt(medicines.length)];
 
             String batch = (char) ('A' + r.nextInt(26)) + String.valueOf(r.nextInt(100));
 
@@ -207,9 +213,9 @@ public class DataGenerator {
         basePrice = 50000;
     }
 
-            String expiry = error ? "invalid-date"
+            String expiry = errorexpiry ? "invalid-date"
                     : LocalDate.now().plusDays(r.nextInt(500) - 200).toString();
-            int qty = error ? -r.nextInt(100) : r.nextInt(200) + 1;
+            int qty = errorqty ? -r.nextInt(100) : r.nextInt(200) + 1;
 
             fw.write(id + "," + name + "," + batch + "," + ingredient + ","
                     + dosageForm + "," + strength + "," + unit + ","

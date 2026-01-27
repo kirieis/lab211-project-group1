@@ -29,10 +29,9 @@ CREATE TABLE Medicine (
     strength NVARCHAR(20),
     unit NVARCHAR(10),
     manufacturer NVARCHAR(100),
-    price DECIMAL(12,2),
-    requires_prescription BIT,
     expiry DATE,
-    quantity INT CHECK (quantity >= 0)
+    quantity INT CHECK (quantity >= 0),
+    base_price DECIMAL(10,2)
 );
 
 /* =========================
