@@ -30,8 +30,8 @@ CREATE TABLE Medicine (
     unit NVARCHAR(10),
     manufacturer NVARCHAR(100),
     expiry DATE,
-    quantity INT CHECK (quantity >= 0),
-    base_price DECIMAL(10,2)
+    quantity INT,
+    price INT
 );
 
 /* =========================
@@ -46,7 +46,7 @@ FROM 'E:\Project-LAB-github\lab211-project-group1\data\medicines_clean.csv'
 WITH (
     FIRSTROW = 2,
     FIELDTERMINATOR = ',',
-    ROWTERMINATOR = '\n',
+    ROWTERMINATOR = '0x0a',
     CODEPAGE = '65001'
 );
 GO
