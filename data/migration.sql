@@ -33,6 +33,7 @@ CREATE TABLE Medicine (
     quantity INT,
     price INT,
 );
+GO
 
 /* =========================
    IMPORT MEDICINE DATA
