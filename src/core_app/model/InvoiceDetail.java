@@ -1,41 +1,26 @@
 package core_app.model;
+
 public class InvoiceDetail {
 
-    private int invoiceDetailId;
-    private int invoiceId;
-    private int batchId;
+    private String medicineId;
+    private String medicineName;
     private int quantity;
     private double unitPrice;
-    private double subtotal;
 
-    public InvoiceDetail() {
-    }
-
-    public InvoiceDetail(int invoiceDetailId, int invoiceId, int batchId,
+    public InvoiceDetail(String medicineId, String medicineName,
                          int quantity, double unitPrice) {
-        this.invoiceDetailId = invoiceDetailId;
-        this.invoiceId = invoiceId;
-        this.batchId = batchId;
+        this.medicineId = medicineId;
+        this.medicineName = medicineName;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
-        calculateSubtotal();
     }
 
-    private void calculateSubtotal() {
-        this.subtotal = this.quantity * this.unitPrice;
+    public String getMedicineId() {
+        return medicineId;
     }
 
-    // Getters & Setters
-    public int getInvoiceDetailId() {
-        return invoiceDetailId;
-    }
-
-    public int getInvoiceId() {
-        return invoiceId;
-    }
-
-    public int getBatchId() {
-        return batchId;
+    public String getMedicineName() {
+        return medicineName;
     }
 
     public int getQuantity() {
@@ -46,8 +31,4 @@ public class InvoiceDetail {
         return unitPrice;
     }
 
-    public double getSubtotal() {
-        return subtotal;
-    }
 }
- 

@@ -95,23 +95,25 @@ CREATE TABLE Invoice (
     pharmacist_id INT,
     customer_id INT,
     total_amount DECIMAL(12,2),
+    payment_method NVARCHAR(50),
 
     FOREIGN KEY (pharmacist_id) REFERENCES Pharmacist(pharmacist_id),
     FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
 );
+GO
 
 /* =========================
    INVOICE DETAIL
    (LINK DIRECTLY TO MEDICINE)
    ========================= */
 CREATE TABLE Invoice_Detail (
-    invoice_detail_id INT IDENTITY PRIMARY KEY,
     invoice_id INT NOT NULL,
     medicine_id VARCHAR(20) NOT NULL,
+    medicine_name NVARCHAR(100) NOT NULL,
     quantity INT CHECK (quantity > 0),
-    unit_price DECIMAL(10,2),
-    subtotal DECIMAL(12,2),
+    unit_price DECIMAL(12,2) CHECK (unit_price >= 0),
 
     FOREIGN KEY (invoice_id) REFERENCES Invoice(invoice_id),
     FOREIGN KEY (medicine_id) REFERENCES Medicine(medicine_id)
 );
+GO

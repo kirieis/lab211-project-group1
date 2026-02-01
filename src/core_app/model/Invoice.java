@@ -2,7 +2,6 @@ package core_app.model;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import core_app.model.InvoiceDetail;
 
 public class Invoice {
 
@@ -35,11 +34,12 @@ public class Invoice {
         calculateTotalAmount();
     }
 
-    private void calculateTotalAmount() {
+    private double calculateTotalAmount() {
         totalAmount = 0;
         for (InvoiceDetail d : invoiceDetails) {
-            totalAmount += d.getSubtotal();
+            totalAmount += d.getQuantity() * d.getUnitPrice();
         }
+        return totalAmount;
     }
 
     // Getters & Setters
