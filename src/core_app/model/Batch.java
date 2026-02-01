@@ -9,11 +9,10 @@ public class Batch implements Comparable<Batch> {
     private LocalDate manufactureDate;
     private LocalDate expiryDate;
 
-    private int vienPerVi;
-    private int viPerHop;
-    
+    private int tabletsPerBlister;
+    private int blisterPerBox;
 
-    private int totalVien;
+    private int totalTablets;
 
     private Medicine medicine;
 
@@ -24,19 +23,19 @@ public class Batch implements Comparable<Batch> {
                  String batchNumber,
                  LocalDate manufactureDate,
                  LocalDate expiryDate,
-                 int vienPerVi,
-                 int viPerHop,
+                 int tabletsPerBlister,
+                 int blisterPerBox,
 
-                 int totalVien,
+                 int totalTablets,
                  Medicine medicine) {
         this.batchId = batchId;
         this.batchNumber = batchNumber;
         this.manufactureDate = manufactureDate;
         this.expiryDate = expiryDate;
-        this.vienPerVi = vienPerVi;
-        this.viPerHop = viPerHop;
-        
-        this.totalVien = totalVien;
+        this.tabletsPerBlister = tabletsPerBlister;
+        this.blisterPerBox = blisterPerBox;
+
+        this.totalTablets = totalTablets;
         this.medicine = medicine;
     }
 
@@ -45,7 +44,7 @@ public class Batch implements Comparable<Batch> {
     }
 
     public boolean isSellable() {
-        return !isExpired() && totalVien > 0;
+        return !isExpired() && totalTablets > 0;
     }
 
     @Override
@@ -53,26 +52,26 @@ public class Batch implements Comparable<Batch> {
         return this.expiryDate.compareTo(other.expiryDate);
     }
 
-    public int convertToVien(int quantity, UnitType unitType) {
+    public int convertToTablets(int quantity, UnitType unitType) {
         switch (unitType) {
-            case VIEN:
+            case TABLETS:
                 return quantity;
-            case VI:
-                return quantity * vienPerVi;
-            case HOP:
-                return quantity * viPerHop * vienPerVi;
-           
+            case BLISTER:
+                return quantity * tabletsPerBlister;
+            case BOX:
+                return quantity * blisterPerBox * tabletsPerBlister;
+
             default:
                 throw new IllegalArgumentException("Invalid unit type");
         }
     }
 
     public void deductStock(int quantity, UnitType unitType) {
-        int vien = convertToVien(quantity, unitType);
-        if (vien > totalVien) {
+        int tablets = convertToTablets(quantity, unitType);
+        if (tablets > totalTablets) {
             throw new IllegalArgumentException("Not enough stock in batch");
         }
-        totalVien -= vien;
+        totalTablets -= tablets;
     }
 
     public String getBatchId() {
@@ -91,8 +90,8 @@ public class Batch implements Comparable<Batch> {
         return expiryDate;
     }
 
-    public int getTotalVien() {
-        return totalVien;
+    public int getTotalTablets() {
+        return totalTablets;
     }
 
     public Medicine getMedicine() {
