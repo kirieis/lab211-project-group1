@@ -104,12 +104,7 @@
             <input id="filterQuery" type="text" placeholder="Tên thuốc, mã, lô..." />
           </label>
 
-          <label class="field">
-            <span>Chi nhánh</span>
-            <select id="filterBranch">
-              <option value="">Tất cả</option>
-            </select>
-          </label>
+
 
           <label class="field">
             <span>Giá (min)</span>
@@ -186,6 +181,11 @@
           <select id="modalUnit" class="field-select">
             <!-- Populated by JS -->
           </select>
+        </label>
+
+        <label class="field">
+          <span>Số lượng</span>
+          <input id="modalQty" type="number" min="1" value="1" class="field-input" />
         </label>
 
         <div class="modal__actions">

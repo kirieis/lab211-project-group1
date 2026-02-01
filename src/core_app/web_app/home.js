@@ -7,7 +7,6 @@ const state = {
 
   // filters
   query: "",
-  branch: "",
   min: "",
   max: "",
   sort: "pop_desc",
@@ -77,7 +76,7 @@ function parseCSV(text) {
     // medicine_id,name,batch,ingredient,dosage_form,strength,unit,manufacturer,expiry,quantity,price
     if (parts.length < 11) return;
 
-    const [medId, name, batchId, ingredient, dosage, strength, unit, manufacturer, dateStr, quantityStr, priceStr] = parts;
+    const [medId, name, batchId, ingredient, dosageForm, strength, unit, manufacturer, dateStr, quantityStr, priceStr] = parts;
     const quantity = Number(quantityStr);
     const price = Number(priceStr);
 
@@ -93,16 +92,17 @@ function parseCSV(text) {
     const vienPerVi = 10;
     const viPerHop = 3;
 
-    // Base price is per Unit (Viên)
+    // Base price is per Unit (Viên) or per Chai for Syrup
     const basePrice = isNaN(price) ? 0 : price;
 
     // Calculate final price with discount
     // This is the BASE unit price
     const finalBasePrice = discount ? Math.round(basePrice * (1 - discount / 100)) : basePrice;
 
-    const storeIdx = (h % 5) + 1;
-    const store = `CN${storeIdx}`;
     const popularity = (hashString(name + batchId) % 1000) + 1;
+
+    // Determine if liquid product (Syrup, Suspension)
+    const isLiquid = ['Syrup', 'Suspension'].includes(dosageForm);
 
     rows.push({
       id: medId,
@@ -110,17 +110,18 @@ function parseCSV(text) {
       batchId,
       date: dateStr,
       quantity: isNaN(quantity) ? 0 : quantity,
+      dosageForm: dosageForm || 'Tablet',
+      isLiquid,
 
       // Pricing Details
       price: basePrice, // Original Base Price
       discount,
       finalBasePrice, // Discounted Base Price
 
-      // Conversion
+      // Conversion (only for solid forms)
       vienPerVi,
       viPerHop,
 
-      store,
       popularity
     });
   });
@@ -157,12 +158,10 @@ function applyFilters(products) {
 
   if (q) {
     out = out.filter(p => {
-      const hay = `${p.name} ${p.id} ${p.batchId} ${p.store}`.toLowerCase();
+      const hay = `${p.name} ${p.id} ${p.dosageForm}`.toLowerCase();
       return hay.includes(q);
     });
   }
-
-  if (state.branch) out = out.filter(p => p.store === state.branch);
 
   // Filter based on BASE UNIT PRICE
   if (min !== null) out = out.filter(p => p.finalBasePrice >= min);
@@ -212,13 +211,21 @@ function paginate(arr) {
 }
 
 // -------- Pricing Logic --------
-function calculateDisplayPrice(product, unit) {
+function calculateDisplayPrice(product, unit, qty = 1) {
+  if (product.isLiquid) {
+    // Liquid products: price per Chai (bottle)
+    const original = product.price * qty;
+    const final = product.finalBasePrice * qty;
+    return { original, final };
+  }
+
+  // Solid products: Viên/Vỉ/Hộp
   let multiplier = 1;
   if (unit === "Vỉ") multiplier = product.vienPerVi;
   if (unit === "Hộp") multiplier = product.vienPerVi * product.viPerHop;
 
-  const original = product.price * multiplier;
-  const final = product.finalBasePrice * multiplier;
+  const original = product.price * multiplier * qty;
+  const final = product.finalBasePrice * multiplier * qty;
 
   return { original, final };
 }
@@ -229,13 +236,13 @@ function productCard(p) {
     ? `<span class="tag tag--sale">SALE -${p.discount}%</span>`
     : `<span class="tag">NEW</span>`;
 
-  // Display base price (Viên) on card
-  // If we want to show "Hộp" price by default, we can, but "Viên" is consistent base
-  const { final } = calculateDisplayPrice(p, "Viên");
+  // Display base price on card
+  const unitLabel = p.isLiquid ? 'chai' : 'viên';
+  const { final } = calculateDisplayPrice(p, p.isLiquid ? "Chai" : "Viên");
 
   const priceHtml = p.discount > 0
-    ? `<span class="price">${formatVND(final)}<span class="unit">/viên</span> <del>${formatVND(p.price)}</del></span>`
-    : `<span class="price">${formatVND(final)}<span class="unit">/viên</span></span>`;
+    ? `<span class="price">${formatVND(final)}<span class="unit">/${unitLabel}</span> <del>${formatVND(p.price)}</del></span>`
+    : `<span class="price">${formatVND(final)}<span class="unit">/${unitLabel}</span></span>`;
 
   return `
     <article class="card">
@@ -243,8 +250,8 @@ function productCard(p) {
         <div>
           <h3 class="card__name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
           <div class="card__meta">
-            <div class="line">Mã: <b>${escapeHtml(p.id)}</b> • Lô: <b>${escapeHtml(p.batchId)}</b></div>
-            <div class="line">CN: <b>${escapeHtml(p.store)}</b> • HSD: <b>${escapeHtml(p.date)}</b></div>
+            <div class="line">Mã: <b>${escapeHtml(p.id)}</b></div>
+            <div class="line">Loại: <b>${escapeHtml(p.dosageForm)}</b> • HSD: <b>${escapeHtml(p.date)}</b></div>
           </div>
         </div>
         ${saleTag}
@@ -252,7 +259,6 @@ function productCard(p) {
 
       <div class="card__mid">
         ${priceHtml}
-        <!-- Unit selector removed from card face -->
       </div>
 
       <div class="card__actions">
@@ -275,16 +281,24 @@ window.openModal = (id, buyNow) => {
   isBuyNow = buyNow;
 
   $("modalName").textContent = p.name;
-  $("modalMeta").textContent = `Mã: ${p.id} • Lô: ${p.batchId}`;
+  $("modalMeta").textContent = `Mã: ${p.id} • Loại: ${p.dosageForm}`;
 
-  // Populate Unit Selector
+  // Populate Unit Selector based on product type
   const select = $("modalUnit");
-  select.innerHTML = `
-    <option value="Viên">Viên</option>
-    <option value="Vỉ">Vỉ (x${p.vienPerVi})</option>
-    <option value="Hộp">Hộp (x${p.vienPerVi * p.viPerHop})</option>
-  `;
-  select.value = "Viên"; // Reset to default
+  if (p.isLiquid) {
+    select.innerHTML = `<option value="Chai">Chai</option>`;
+    select.value = "Chai";
+  } else {
+    select.innerHTML = `
+      <option value="Viên">Viên</option>
+      <option value="Vỉ">Vỉ (x${p.vienPerVi})</option>
+      <option value="Hộp">Hộp (x${p.vienPerVi * p.viPerHop})</option>
+    `;
+    select.value = "Viên";
+  }
+
+  // Reset quantity
+  $("modalQty").value = 1;
 
   // Initial Price Update
   updateModalPrice();
@@ -292,8 +306,9 @@ window.openModal = (id, buyNow) => {
   // Show Modal
   $("optModal").classList.add("active");
 
-  // Setup listener
+  // Setup listeners
   select.onchange = updateModalPrice;
+  $("modalQty").oninput = updateModalPrice;
   $("modalConfirmBtn").onclick = handleModalConfirm;
 };
 
@@ -306,7 +321,8 @@ function updateModalPrice() {
   if (!currentModalProductId) return;
   const p = state.products.find(x => x.id === currentModalProductId);
   const unit = $("modalUnit").value;
-  const { original, final } = calculateDisplayPrice(p, unit);
+  const qty = parseInt($("modalQty").value) || 1;
+  const { original, final } = calculateDisplayPrice(p, unit, qty);
 
   const priceEl = $("modalPrice");
   if (p.discount > 0) {
@@ -319,7 +335,8 @@ function updateModalPrice() {
 function handleModalConfirm() {
   if (!currentModalProductId) return;
   const unit = $("modalUnit").value;
-  addToCart(currentModalProductId, unit);
+  const qty = parseInt($("modalQty").value) || 1;
+  addToCart(currentModalProductId, unit, qty);
   closeModal();
 
   if (isBuyNow) {
@@ -328,24 +345,27 @@ function handleModalConfirm() {
   }
 }
 
-function addToCart(id, unit) {
+function addToCart(id, unit, qty) {
   const product = state.products.find((p) => p.id === id);
   if (!product) return;
 
-  const { final } = calculateDisplayPrice(product, unit);
+  const { final } = calculateDisplayPrice(product, unit, 1); // price per unit
 
   let cart = getCart();
   const existing = cart.find(item => item.id === id && item.unit === unit);
 
   if (existing) {
-    existing.qty += 1;
+    existing.qty += qty;
   } else {
     cart.push({
       id: product.id,
       name: product.name,
       price: final,
       unit: unit,
-      qty: 1
+      qty: qty,
+      isLiquid: product.isLiquid,
+      vienPerVi: product.vienPerVi,
+      viPerHop: product.viPerHop
     });
   }
 
@@ -497,7 +517,7 @@ function bindEvents() {
     $(id).addEventListener("input", debounced);
   });
 
-  ["filterBranch", "filterSort", "filterOnlySale"].forEach(id => {
+  ["filterSort", "filterOnlySale"].forEach(id => {
     $(id).addEventListener("change", () => {
       syncFiltersFromUI();
       state.page = 1;
@@ -540,7 +560,6 @@ function bindEvents() {
 
 function syncFiltersFromUI() {
   state.query = $("filterQuery").value || "";
-  state.branch = $("filterBranch").value || "";
   state.min = $("filterMin").value || "";
   state.max = $("filterMax").value || "";
   state.sort = $("filterSort").value || "pop_desc";
@@ -550,7 +569,6 @@ function syncFiltersFromUI() {
 
 function resetFiltersUI() {
   $("filterQuery").value = "";
-  $("filterBranch").value = "";
   $("filterMin").value = "";
   $("filterMax").value = "";
   $("filterSort").value = "pop_desc";
@@ -570,18 +588,6 @@ function debounce(fn, ms) {
   };
 }
 
-function fillBranches(products) {
-  const branches = [...new Set(products.map(p => p.store))].sort();
-  const sel = $("filterBranch");
-  sel.innerHTML = '<option value="">Tất cả</option>';
-  for (const b of branches) {
-    const opt = document.createElement("option");
-    opt.value = b;
-    opt.textContent = b;
-    sel.appendChild(opt);
-  }
-}
-
 // -------- Boot --------
 (async function init() {
   try {
@@ -590,7 +596,6 @@ function fillBranches(products) {
   } catch (e) { }
 
   state.products = await loadProducts();
-  fillBranches(state.products);
   bindEvents();
   renderAllSections();
 })();
