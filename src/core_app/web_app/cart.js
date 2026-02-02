@@ -87,16 +87,63 @@ function renderCart() {
   $("totalPrice").textContent = formatVND(subtotal);
 }
 
+// Helper for auto-conversion (Viên -> Hộp/Vỉ)
+function checkConvert(item) {
+  if (item.isLiquid) return;
+
+  // Use defaults if missing (same as parseCSV/getUnitConversionInfo)
+  const perVi = item.vienPerVi || 10;
+  const viPerHop = item.viPerHop || 3;
+  const perHop = perVi * viPerHop;
+
+  if (item.unit !== 'Viên') return;
+
+  if (item.qty >= perHop && item.qty % perHop === 0) {
+    // Convert to Box
+    const ratio = item.qty / perHop;
+    item.unit = 'Hộp';
+    item.qty = ratio;
+    // Price remains the unit price for the NEW unit? 
+    // Wait, cart item price is usually stored as UNITY Price. 
+    // If we change unit, we must update price to be the Price Per Box.
+    // In renderCart, itemTotal = item.price * item.qty.
+    // If we had 30 pills * 1k = 30k.
+    // Now 1 Box * 30k = 30k.
+    // So item.price must be multiplied by perHop.
+    item.price = item.price * perHop;
+  } else if (item.qty >= perVi && item.qty % perVi === 0) {
+    // Convert to Blister (Vỉ)
+    const ratio = item.qty / perVi;
+    item.unit = 'Vỉ';
+    item.qty = ratio;
+    item.price = item.price * perVi;
+  }
+}
+
 window.updateQty = (index, delta) => {
   const cart = getCart();
-  cart[index].qty = Math.max(1, cart[index].qty + delta);
+  const item = cart[index];
+
+  // If user increases quantity, we just increase current unit quantity
+  // But if the RESULT triggers a conversion threshold (e.g. user had 29 Viên, adds 1 -> 30 Viên), we convert.
+  item.qty = Math.max(1, item.qty + delta);
+
+  // Try conversion
+  checkConvert(item);
+
   saveCart(cart);
 };
 
 window.setQty = (index, value) => {
   const cart = getCart();
   const qty = parseInt(value) || 1;
-  cart[index].qty = Math.max(1, qty);
+  const item = cart[index];
+
+  item.qty = Math.max(1, qty);
+
+  // Try conversion
+  checkConvert(item);
+
   saveCart(cart);
 };
 

@@ -15,11 +15,14 @@ function clearCart() {
 // Discount codes
 const DISCOUNT_CODES = {
     'A7CO': 7,
-    'ANHSITA': 10
+    'ANHSITA': 10,
+    'THANHHOA': 36
 };
 
 let appliedDiscount = 0;
 let subtotal = 0;
+let isLoggedIn = false;
+let currentUser = null;
 
 function generateOrderId() {
     const timestamp = Date.now().toString(36).toUpperCase();
@@ -28,6 +31,38 @@ function generateOrderId() {
 }
 
 const orderId = generateOrderId();
+
+// Check login status from backend
+async function checkLoginStatus() {
+    try {
+        const res = await fetch('/api/auth-status');
+        const data = await res.json();
+        isLoggedIn = data.isLoggedIn;
+        currentUser = data.isLoggedIn ? data : null;
+
+        // Update UI based on login status
+        updateDiscountUI();
+    } catch (e) {
+        // If fetch fails (e.g., running on Live Server), default to not logged in
+        isLoggedIn = false;
+        currentUser = null;
+        updateDiscountUI();
+    }
+}
+
+function updateDiscountUI() {
+    const discountRow = document.querySelector('.discount-row');
+    if (!discountRow) return;
+
+    if (!isLoggedIn) {
+        // Show login prompt instead of discount input
+        discountRow.innerHTML = `
+            <div style="width: 100%; text-align: center; padding: 12px; background: #fef3c7; border-radius: 8px; border: 1px solid #fcd34d;">
+                <span style="color: #92400e;">🔒 <a href="login.html" style="color: #1d4ed8; text-decoration: underline; font-weight: 600;">Đăng nhập</a> để sử dụng mã giảm giá</span>
+            </div>
+        `;
+    }
+}
 
 function renderOrderItems() {
     const cart = getCart();
@@ -77,8 +112,15 @@ function updatePrices() {
 }
 
 function applyDiscount() {
-    const code = $("discountCode").value.trim().toUpperCase();
     const messageEl = $("discountMessage");
+
+    // Check if logged in first
+    if (!isLoggedIn) {
+        messageEl.innerHTML = '<span style="color: var(--danger);">⛔ Vui lòng đăng nhập để sử dụng mã giảm giá!</span>';
+        return;
+    }
+
+    const code = $("discountCode").value.trim().toUpperCase();
 
     if (!code) {
         messageEl.innerHTML = '<span style="color: var(--danger);">Vui lòng nhập mã giảm giá!</span>';
@@ -116,14 +158,23 @@ window.goHome = () => {
 };
 
 // Event listeners
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check login status first
+    await checkLoginStatus();
+
     renderOrderItems();
 
-    $("btnApplyDiscount").addEventListener('click', applyDiscount);
+    const btnApply = $("btnApplyDiscount");
+    if (btnApply) {
+        btnApply.addEventListener('click', applyDiscount);
+    }
 
-    $("discountCode").addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') applyDiscount();
-    });
+    const discountInput = $("discountCode");
+    if (discountInput) {
+        discountInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applyDiscount();
+        });
+    }
 
     $("btnConfirmPayment").addEventListener('click', confirmPayment);
 });

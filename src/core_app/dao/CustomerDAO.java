@@ -69,6 +69,19 @@ public class CustomerDAO {
         return false;
     }
 
+    public boolean updateRole(int id, String newRole) {
+        String sql = "UPDATE Customer SET role = ? WHERE customer_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newRole);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     private Customer mapResultSetToCustomer(ResultSet rs) throws SQLException {
         return new Customer(
                 rs.getInt("customer_id"),

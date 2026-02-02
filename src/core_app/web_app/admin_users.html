@@ -514,7 +514,12 @@
                                 ${u.role === 'ADMIN' ? '🛡️ Admin' : '👤 Guest'}
                             </span>
                         </td>
-                        <td style="text-align: right;">
+                        <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
+                            <button class="btn-action" style="background: ${u.role === 'ADMIN' ? '#fee2e2' : '#dcfce7'}; color: ${u.role === 'ADMIN' ? '#ef4444' : '#10b981'};" 
+                                title="${u.role === 'ADMIN' ? 'Thu hồi quyền Admin' : 'Cấp quyền Admin'}" 
+                                onclick="toggleRole(${u.id}, '${u.role}')">
+                                ${u.role === 'ADMIN' ? '⬇️' : '⬆️'}
+                            </button>
                             <button class="btn-action btn-delete" title="Xóa người dùng" onclick="deleteUser(${u.id})">
                                 🗑️
                             </button>
@@ -575,6 +580,26 @@
                 loadUsers();
             } else {
                 showToast('Lỗi khi xóa người dùng!', 'error');
+            }
+        }
+
+        async function toggleRole(id, currentRole) {
+            const newRole = currentRole === 'ADMIN' ? 'CUSTOMER' : 'ADMIN';
+            const actionText = newRole === 'ADMIN' ? 'cấp quyền Admin cho' : 'thu hồi quyền Admin của';
+
+            if (!confirm(`Bạn có chắc muốn ${actionText} người dùng này?`)) return;
+
+            const params = new URLSearchParams();
+            params.append('action', 'updateRole');
+            params.append('id', id);
+            params.append('role', newRole);
+
+            const res = await fetch('users', { method: 'POST', body: params });
+            if (await res.text() === 'OK') {
+                showToast(newRole === 'ADMIN' ? '✅ Đã cấp quyền Admin!' : '✅ Đã thu hồi quyền Admin!');
+                loadUsers();
+            } else {
+                showToast('Lỗi khi cập nhật quyền!', 'error');
             }
         }
 

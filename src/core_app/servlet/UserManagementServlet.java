@@ -60,6 +60,16 @@ public class UserManagementServlet extends HttpServlet {
             int id = Integer.parseInt(req.getParameter("id"));
             boolean success = customerDAO.delete(id);
             resp.getWriter().print(success ? "OK" : "Error");
+        } else if ("updateRole".equals(action)) {
+            int id = Integer.parseInt(req.getParameter("id"));
+            String newRole = req.getParameter("role");
+            // Validate role
+            if (!"ADMIN".equals(newRole) && !"CUSTOMER".equals(newRole)) {
+                resp.getWriter().print("InvalidRole");
+                return;
+            }
+            boolean success = customerDAO.updateRole(id, newRole);
+            resp.getWriter().print(success ? "OK" : "Error");
         }
     }
 

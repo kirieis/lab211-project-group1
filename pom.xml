@@ -57,15 +57,11 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- SQL Server JDBC (LOCAL JAR) -->
+        <!-- SQL Server JDBC (Maven Central) -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>13.2.1</version>
-            <scope>system</scope>
-            <systemPath>
-                ${project.basedir}/src/core_app/jars/mssql-jdbc-13.2.1.jre11.jar
-            </systemPath>
+            <version>12.6.1.jre11</version>
         </dependency>
 
     </dependencies>

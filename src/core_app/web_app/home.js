@@ -29,7 +29,7 @@ const saveCart = (cart) => {
   localStorage.setItem("cart", JSON.stringify(cart));
   const badge = $("cartBadge");
   if (badge) {
-    badge.textContent = String(cart.reduce((sum, item) => sum + item.qty, 0));
+    badge.textContent = String(cart.length);
   }
 };
 
@@ -83,10 +83,37 @@ function parseCSV(text) {
     if (!medId || !name) return;
 
     // --- Pricing & Sale Logic ---
-    // Deterministic sale logic since it is not in CSV yet
-    const h = hashString(medId);
-    const hasSale = h % 5 === 0; // 20% chance
-    const discount = hasSale ? (5 + (hashString(name) % 26)) : 0;
+    // --- Pricing & Sale Logic (Mocking based on Expiry) ---
+    // User requested: Sale ONLY if close to expiry (e.g. within 6 months)
+    // Discount range: 5-20%
+
+    let hasSale = false;
+    let daysUntilExpiry = 3650; // Default far future
+
+    try {
+      // Attempt to parse dateStr
+      // Supported formats: YYYY-MM-DD or DD/MM/YYYY
+      let d = new Date(dateStr);
+      if (isNaN(d.getTime())) {
+        const dp = dateStr.split('/'); // Check for DD/MM/YYYY
+        if (dp.length === 3) d = new Date(`${dp[2]}-${dp[1]}-${dp[0]}`);
+      }
+
+      if (!isNaN(d.getTime())) {
+        const now = new Date();
+        const diff = d - now;
+        daysUntilExpiry = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      }
+    } catch (e) { }
+
+    // Logic: If expiring in <= 180 days (6 months) AND not expired yet
+    if (daysUntilExpiry > 0 && daysUntilExpiry <= 180) {
+      hasSale = true;
+    }
+
+    // Determine discount if sale
+    // Range: 5% to 20% -> 5 + [0..15]
+    const discount = hasSale ? (5 + (hashString(name) % 16)) : 0;
 
     // Default conversion rates if not in CSV
     const vienPerVi = 10;
@@ -130,20 +157,22 @@ function parseCSV(text) {
 }
 
 // -------- CSV Loader --------
+// -------- CSV Loader --------
 async function loadProducts() {
   try {
-    const res = await fetch("/data/medicines_clean.csv", { cache: "no-store" });
+    // Determine the base URL dynamically or use relative path
+    // For Tomcat deployment, 'data/medicines_clean.csv' relative to 'home.html' works if structure is preserved.
+    const res = await fetch("data/medicines_clean.csv", { cache: "no-store" });
+
     if (!res.ok) {
-      // Fallback
-      const fallbackRes = await fetch("../../../data/medicines_clean.csv", { cache: "no-store" });
-      if (!fallbackRes.ok) throw new Error("CSV Not Found");
-      const text = await fallbackRes.text();
-      return parseCSV(text);
+      throw new Error(`CSV Not Found: ${res.status} ${res.statusText}`);
     }
+
     const text = await res.text();
     return parseCSV(text);
   } catch (e) {
-    console.error("Failed to load medicines:", e);
+    console.error("Failed to load products:", e);
+    // Return empty array to prevent app crash
     return [];
   }
 }
