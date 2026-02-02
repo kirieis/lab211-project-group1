@@ -556,27 +556,21 @@ function bindEvents() {
 
   $("btnGoAll").addEventListener("click", () => scrollToAll());
 
-  // Auth logic
+  // Auth logic - Redirect to Profile Page
   const authState = window.authState || { isLoggedIn: false };
+  const userMenuContainer = $("userMenuContainer");
   const btnLogin = $("btnLogin");
+
   if (authState.isLoggedIn) {
-    if (authState.role === "ADMIN") {
-      const adminLink = document.createElement("a");
-      adminLink.href = "admin/users";
-      adminLink.className = "btn btn--ghost";
-      adminLink.innerHTML = "⚙️ Admin";
-      adminLink.style.textDecoration = "none";
-      btnLogin.parentNode.insertBefore(adminLink, btnLogin);
-    }
-    btnLogin.innerHTML = `👤 ${escapeHtml(authState.fullName)} (Đăng xuất)`;
-    btnLogin.addEventListener("click", (e) => {
-      e.preventDefault();
-      window.location.href = "logout";
-    });
+    // Show username as link to profile page
+    userMenuContainer.innerHTML = `
+      <a href="profile.html" class="btn btn--ghost" style="text-decoration: none;">
+        👤 ${escapeHtml(authState.fullName)}
+      </a>
+    `;
   } else {
     btnLogin.innerHTML = `👤 Đăng nhập`;
     btnLogin.addEventListener("click", (e) => {
-      // Removed e.preventDefault() here so if it's an <a> tag, it can also work naturally
       window.location.href = "login.html";
     });
   }

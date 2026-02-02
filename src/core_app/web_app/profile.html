@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Hồ sơ người dùng - Github Pharmacy</title>
+    <link rel="stylesheet" href="home.css" />
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header__inner container">
+            <div class="brand">
+                <a href="home.html" style="text-decoration: none; display: flex; align-items: center; gap: 14px;">
+                    <div class="brand__logo" aria-label="Github logo">
+                        <span class="logo-dot"></span>
+                        <span class="logo-dot"></span>
+                        <span class="logo-dot"></span>
+                    </div>
+                    <div class="brand__text">
+                        <div class="brand__name">Github Pharmacy</div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="search">
+                <input id="globalSearch" type="search" placeholder="Tìm tên thuốc, mã thuốc, chi nhánh..." />
+                <button id="btnSearch" class="btn btn--icon" title="Tìm kiếm" aria-label="Tìm kiếm">
+                    🔍
+                </button>
+            </div>
+
+            <div class="header__actions">
+                <a href="profile.html" id="btnLogout" class="btn btn--ghost" style="text-decoration: none;">
+                    👤 <span id="headerUsername">Tài khoản</span>
+                </a>
+                <button id="btnCart" class="btn btn--primary" onclick="window.location.href='cart.html'">
+                    🛒 Giỏ hàng <span id="cartBadge" class="badge">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN PROFILE LAYOUT -->
+    <main class="container main">
+        <div class="profile-layout">
+
+            <!-- SIDEBAR -->
+            <aside class="profile-sidebar">
+                <div class="profile-user">
+                    <div class="profile-user__avatar">👤</div>
+                    <div class="profile-user__info">
+                        <div id="sbName" class="profile-user__name">User Name</div>
+                        <div id="sbRole" class="profile-user__role">Member</div>
+                    </div>
+                </div>
+
+                <nav class="profile-nav">
+                    <button class="profile-nav__item active" onclick="showTab('overview')">
+                        🔹 Tổng quan
+                    </button>
+                    <button class="profile-nav__item" onclick="showTab('history')">
+                        📋 Lịch sử mua hàng
+                    </button>
+                    <button class="profile-nav__item" onclick="showTab('info')">
+                        👤 Thông tin cá nhân
+                    </button>
+                    <div id="adminLinkContainer"></div>
+                </nav>
+
+                <button class="profile-logout" onclick="window.location.href='logout'">
+                    🚪 Đăng xuất
+                </button>
+            </aside>
+
+            <!-- CONTENT AREA -->
+            <div class="profile-content">
+
+                <!-- Tab: Overview -->
+                <div id="tab-overview" class="profile-tab active">
+                    <h2 class="profile-heading">Tổng quan</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card__icon">🛒</div>
+                            <div class="stat-card__info">
+                                <div class="stat-card__value">0</div>
+                                <div class="stat-card__label">Đơn hàng đã mua</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card__icon">💰</div>
+                            <div class="stat-card__info">
+                                <div class="stat-card__value">0đ</div>
+                                <div class="stat-card__label">Tổng tiền tích lũy</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 32px;">
+                        <h3 style="margin-bottom: 16px;">Đơn hàng gần đây</h3>
+                        <div class="empty-state">
+                            Chưa có đơn hàng nào gần đây. <a href="home.html">Mua sắm ngay</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Purchase History -->
+                <div id="tab-history" class="profile-tab">
+                    <h2 class="profile-heading">Lịch sử mua hàng</h2>
+                    <div class="empty-state">
+                        Bạn chưa có đơn hàng nào.
+                    </div>
+                </div>
+
+                <!-- Tab: Personal Info -->
+                <div id="tab-info" class="profile-tab">
+                    <h2 class="profile-heading">Thông tin cá nhân</h2>
+                    <div class="info-card">
+                        <div class="field">
+                            <span>Họ và tên</span>
+                            <input type="text" id="infoName" class="info-input" readonly>
+                        </div>
+                        <div class="field">
+                            <span>Số điện thoại</span>
+                            <input type="text" id="infoPhone" class="info-input" readonly>
+                        </div>
+                        <div class="field">
+                            <span>Địa chỉ</span>
+                            <input type="text" id="infoAddress" class="info-input" readonly>
+                        </div>
+                        <div class="field">
+                            <span>Tên đăng nhập</span>
+                            <input type="text" id="infoUsername" class="info-input" readonly>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer__inner">
+            Connect with us : 03xxxxxxx
+        </div>
+    </footer>
+
+    <script>
+        // Simple Profile Page Logic
+        const authState = window.authState || JSON.parse(localStorage.getItem('user_session') || '{}');
+
+        // Check login inside this script since we might not have home.js fully loaded/configured for this page yet
+        // In a real app, this would be server-rendered or checked via API
+        // For now, mirroring what home.js does but simplified
+
+        // Mock user if empty for UI testing
+        const currentUser = authState.fullName ? authState : {
+            fullName: "Nguyễn Văn Test",
+            role: "CUSTOMER",
+            username: "testuser",
+            phone: "0912345678",
+            address: "TP. Hồ Chí Minh"
+        };
+
+        // 1. Bind Header
+        document.getElementById('headerUsername').textContent = currentUser.fullName;
+        document.getElementById('cartBadge').textContent = JSON.parse(localStorage.getItem("cart") || "[]").length;
+
+        // 2. Bind Sidebar
+        document.getElementById('sbName').textContent = currentUser.fullName;
+        document.getElementById('sbRole').textContent = currentUser.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên';
+
+        // Admin Link
+        if (currentUser.role === 'ADMIN') {
+            document.getElementById('adminLinkContainer').innerHTML = `
+            <a href="admin/users" class="profile-nav__item" style="text-decoration:none;">
+                ⚙️ Quản lý người dùng
+            </a>
+        `;
+        }
+
+        // 3. Bind Info Tab
+        document.getElementById('infoName').value = currentUser.fullName || '';
+        // Assuming we have these fields in session/authState, if not placeholders
+        document.getElementById('infoPhone').value = "09xxxxxxxx";
+        document.getElementById('infoAddress').value = "Chưa cập nhật";
+        document.getElementById('infoUsername').value = currentUser.username || 'user';
+
+        // Tab Switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.profile-tab').forEach(el => el.classList.remove('active'));
+            // Show selected
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            // Update sidebar active state
+            document.querySelectorAll('.profile-nav__item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+
+</html>
