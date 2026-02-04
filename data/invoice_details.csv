@@ -1,0 +1,26 @@
+invoice_id,medicine_id,medicine_name,quantity,unit_price
+1,MED001,Paracetamol 500mg,2,50000.00
+1,MED002,Vitamin C 1000mg,3,50000.00
+2,MED003,Amoxicillin 250mg,1,80000.00
+2,MED004,Omeprazole 20mg,2,50000.00
+3,MED001,Paracetamol 500mg,5,50000.00
+3,MED005,Cetirizine 10mg,4,45000.00
+3,MED006,Ibuprofen 400mg,2,55000.00
+4,MED002,Vitamin C 1000mg,1,50000.00
+4,MED007,Calcium 500mg,1,45000.00
+5,MED003,Amoxicillin 250mg,2,80000.00
+5,MED008,Metformin 500mg,3,60000.00
+6,MED001,Paracetamol 500mg,4,50000.00
+6,MED004,Omeprazole 20mg,2,50000.00
+6,MED009,Losartan 50mg,2,60000.00
+7,MED005,Cetirizine 10mg,2,45000.00
+7,MED010,Aspirin 100mg,2,30000.00
+8,MED006,Ibuprofen 400mg,5,55000.00
+8,MED003,Amoxicillin 250mg,3,80000.00
+8,MED007,Calcium 500mg,2,45000.00
+9,MED008,Metformin 500mg,2,60000.00
+9,MED002,Vitamin C 1000mg,3,50000.00
+9,MED010,Aspirin 100mg,1,25000.00
+10,MED009,Losartan 50mg,5,60000.00
+10,MED001,Paracetamol 500mg,6,50000.00
+10,MED004,Omeprazole 20mg,4,60000.00

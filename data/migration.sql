@@ -142,6 +142,26 @@ CREATE TABLE Invoice (
 );
 GO
 
+
+/* =========================
+   IMPORT INVOICE DATA
+   ========================= */
+--Nguyen_Van_An path:E:\Project-LAB-github\lab211-project-group1\data\invoices.csv--
+--Nguyen_Van_An path:E:\Download setup\apache-tomcat-10.1.50\webapps\target\data\invoices.csv--
+--Tran Quoc Thinh path:C:\Users\PC\Documents\GitHub\project_group1\data\invoices.csv--
+--Nguyen Tri Thien path: C:\Users\nguye\Documents\GitHub\lab211-project-group1\data\invoices.csv--
+--Hang Vo Minh Nhat path: C:\Users\nhatg\Documents\GitHub\lab211-project-group1\data\invoices.csv--
+BULK INSERT Invoice 
+FROM 'C:\Users\PC\Documents\GitHub\project_group1\data\invoices.csv'
+WITH (
+    FIRSTROW = 2,
+    FIELDTERMINATOR = ',',
+    ROWTERMINATOR = '0x0a',
+    CODEPAGE = '65001'
+);
+GO
+
+
 /* =========================
    INVOICE DETAIL
    (LINK DIRECTLY TO MEDICINE)
@@ -156,4 +176,31 @@ CREATE TABLE Invoice_Detail (
     FOREIGN KEY (invoice_id) REFERENCES Invoice(invoice_id),
     FOREIGN KEY (medicine_id) REFERENCES Medicine(medicine_id)
 );
+GO
+
+
+/* =========================
+   IMPORT INVOICE_DETAIL DATA 
+   ========================= */
+--Nguyen_Van_An path:E:\Project-LAB-github\lab211-project-group1\data\invoice_details.csv--
+--Nguyen_Van_An path:E:\Download setup\apache-tomcat-10.1.50\webapps\target\data\invoice_details.csv--
+--Tran Quoc Thinh path:C:\Users\PC\Documents\GitHub\project_group1\data\invoice_details.csv--
+--Nguyen Tri Thien path: C:\Users\nguye\Documents\GitHub\lab211-project-group1\data\invoice_details.csv--
+--Hang Vo Minh Nhat path: C:\Users\nhatg\Documents\GitHub\lab211-project-group1\data\invoice_details.csv--
+BULK INSERT Invoice_Detail 
+FROM 'C:\Users\PC\Documents\GitHub\project_group1\data\invoice_details.csv'
+WITH (
+    FIRSTROW = 2,
+    FIELDTERMINATOR = ',',
+    ROWTERMINATOR = '0x0a',
+    CODEPAGE = '65001'
+);
+GO
+
+/* =========================
+   VERIFY DATA COUNTS
+   ========================= */
+SELECT 'Invoice' AS TableName, COUNT(*) AS RecordCount FROM Invoice
+UNION ALL
+SELECT 'Invoice_Detail', COUNT(*) FROM Invoice_Detail;
 GO
