@@ -34,14 +34,14 @@ public class Simulator {
     };
 
     public static void main(String[] args) throws Exception {
-        String endpoint = "http://localhost:8080/api/orders";
+        String endpoint = "http://localhost:8080";
         Random rnd = new Random();
 
         System.out.println("═══════════════════════════════════════════════");
         System.out.println("   BẮT ĐẦU GIẢ LẬP ĐƠN HÀNG - ORDER SIMULATOR");
         System.out.println("═══════════════════════════════════════════════\n");
 
-        for (int i = 1; i <= 50; i++) {
+        for (int i = 1; i <= 20; i++) {
             // Tạo 1-5 items ngẫu nhiên cho mỗi đơn hàng
             int numItems = rnd.nextInt(5) + 1;
             StringBuilder itemsJson = new StringBuilder();
@@ -85,16 +85,16 @@ public class Simulator {
             }
 
             int responseCode = conn.getResponseCode();
-            String status = (responseCode == 200) ? "✅ SUCCESS" : "❌ FAILED";
+            String status = (responseCode == 200) ? " SUCCESS" : " FAILED";
 
-            System.out.printf("Đơn #%02d | Items: %d | Total: %,.0f VND | %s (HTTP %d)\n",
+            System.out.printf("don #%02d | Items: %d | Total: %,.0f VND | %s (HTTP %d)\n",
                     i, numItems, totalAmount, status, responseCode);
 
             Thread.sleep(200); // Delay 200ms giữa các requests
         }
 
         System.out.println("\n═══════════════════════════════════════════════");
-        System.out.println("   HOÀN THÀNH - Đã tạo 50 đơn hàng giả lập");
+        System.out.println("   DONE - 20 simulator orders");
         System.out.println("═══════════════════════════════════════════════");
     }
 }
