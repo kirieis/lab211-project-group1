@@ -12,7 +12,7 @@ function clearCart() {
     localStorage.removeItem("cart");
 }
 
-// Discount codes
+// ==== DISCOUNT CODES ====
 const DISCOUNT_CODES = {
     'A7CO': 7,
     'ANHSITA': 10,
@@ -23,28 +23,25 @@ let appliedDiscount = 0;
 let subtotal = 0;
 let isLoggedIn = false;
 let currentUser = null;
+let pollingInterval = null;
 
-function generateOrderId() {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return `ĐH-${timestamp}${random}`;
+// Tạo mã đơn hàng duy nhất cho nội dung CK
+function generateTransferCode() {
+    const ts = Date.now().toString(36).toUpperCase().slice(-5);
+    const rnd = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `GHP${ts}${rnd}`;
 }
+const transferCode = generateTransferCode();
 
-const orderId = generateOrderId();
-
-// Check login status from backend
+// ==== CHECK LOGIN ====
 async function checkLoginStatus() {
     try {
         const res = await fetch('api/auth-status');
         const data = await res.json();
-        console.log("DEBUG: Login Status Received:", data);
         isLoggedIn = data.isLoggedIn;
         currentUser = data.isLoggedIn ? data : null;
-
-        // Update UI based on login status
         updateDiscountUI();
     } catch (e) {
-        // If fetch fails (e.g., running on Live Server), default to not logged in
         isLoggedIn = false;
         currentUser = null;
         updateDiscountUI();
@@ -54,9 +51,7 @@ async function checkLoginStatus() {
 function updateDiscountUI() {
     const discountRow = document.querySelector('.discount-row');
     if (!discountRow) return;
-
     if (!isLoggedIn) {
-        // Show login prompt instead of discount input
         discountRow.innerHTML = `
             <div style="width: 100%; text-align: center; padding: 12px; background: #fef3c7; border-radius: 8px; border: 1px solid #fcd34d;">
                 <span style="color: #92400e;">🔒 <a href="login.html" style="color: #1d4ed8; text-decoration: underline; font-weight: 600;">Đăng nhập</a> để sử dụng mã giảm giá</span>
@@ -65,9 +60,11 @@ function updateDiscountUI() {
     }
 }
 
+// ==== RENDER ITEMS ====
 function renderOrderItems() {
     const cart = getCart();
     const container = $("orderItems");
+    if (!container) return;
 
     if (cart.length === 0) {
         container.innerHTML = '<p class="muted">Không có sản phẩm nào trong đơn hàng</p>';
@@ -94,73 +91,74 @@ function renderOrderItems() {
     updatePrices();
 }
 
+// ==== UPDATE PRICES (Safe - no crash) ====
 function updatePrices() {
-    $("subtotal").textContent = formatVND(subtotal);
+    const subtotalEl = $("subtotal");
+    const totalPriceEl = $("totalPrice");
+    const discountLineEl = $("discountLine");
+    const discountAmountEl = $("discountAmount");
+
+    if (subtotalEl) subtotalEl.textContent = formatVND(subtotal);
 
     const discountAmount = Math.round(subtotal * appliedDiscount / 100);
     const total = subtotal - discountAmount;
 
-    if (appliedDiscount > 0) {
-        $("discountLine").style.display = "flex";
-        $("discountAmount").textContent = `-${formatVND(discountAmount)} (${appliedDiscount}%)`;
-    } else {
-        $("discountLine").style.display = "none";
+    if (appliedDiscount > 0 && discountLineEl) {
+        discountLineEl.style.display = "flex";
+        if (discountAmountEl) discountAmountEl.textContent = `-${formatVND(discountAmount)} (${appliedDiscount}%)`;
+    } else if (discountLineEl) {
+        discountLineEl.style.display = "none";
     }
 
-    $("totalPrice").textContent = formatVND(total);
-    $("transferAmount").textContent = formatVND(total);
-    $("transferContent").textContent = orderId;
+    if (totalPriceEl) totalPriceEl.textContent = formatVND(total);
 
-    // Cập nhật QR Code động (VietQR - Miễn phí)
-    const qrImg = document.querySelector(".qr-container img");
-    if (qrImg) {
-        const bankId = "MB"; // Ngân hàng Quân đội
-        const accountNo = "3399377355";
-        const template = "compact2";
-        const amount = total;
-        const description = encodeURIComponent(orderId);
-        const accountName = encodeURIComponent("NGUYEN TRI THIEN");
-
-        qrImg.src = `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${amount}&addInfo=${description}&accountName=${accountName}`;
-    }
+    // Cập nhật thông tin chuyển khoản
+    const transferAmountEl = $("transferAmount");
+    const transferContentEl = $("transferContent");
+    if (transferAmountEl) transferAmountEl.textContent = formatVND(total);
+    if (transferContentEl) transferContentEl.textContent = transferCode;
 }
 
+function getFinalAmount() {
+    return subtotal - Math.round(subtotal * appliedDiscount / 100);
+}
+
+// ==== APPLY DISCOUNT ====
 function applyDiscount() {
     const messageEl = $("discountMessage");
+    if (!messageEl) return;
 
-    // Check if logged in first
     if (!isLoggedIn) {
         messageEl.innerHTML = '<span style="color: var(--danger);">⛔ Vui lòng đăng nhập để sử dụng mã giảm giá!</span>';
         return;
     }
 
-    const code = $("discountCode").value.trim().toUpperCase();
-    console.log("DEBUG: Applying code:", code);
-    console.log("DEBUG: Current User:", currentUser);
+    const codeEl = $("discountCode");
+    if (!codeEl) return;
+    const code = codeEl.value.trim().toUpperCase();
 
     if (!code) {
         messageEl.innerHTML = '<span style="color: var(--danger);">Vui lòng nhập mã giảm giá!</span>';
         return;
     }
 
-    // Special code for Admin
+    // Admin code
     if (code === 'ADMIN_FREE') {
         const userRole = (currentUser && currentUser.role) ? currentUser.role.toUpperCase() : "";
-        console.log("DEBUG: User Role for ADMIN_FREE:", userRole);
         if (isLoggedIn && userRole === 'ADMIN') {
             appliedDiscount = 100;
-            messageEl.innerHTML = `<span style="color: #6366f1; font-weight: 700;">🛡️ XÁC NHẬN ADMIN: Chế độ bán hàng 0đ đã kích hoạt!</span>`;
+            messageEl.innerHTML = `<span style="color: #6366f1; font-weight: 700;">🛡️ ADMIN: Chế độ bán hàng 0đ đã kích hoạt!</span>`;
             updatePrices();
             return;
         } else {
-            messageEl.innerHTML = `<span style="color: var(--danger);">⛔ Mã này chỉ dành riêng cho Admin! (Vai trò hiện tại: ${userRole || 'Không xác định'})</span>`;
+            messageEl.innerHTML = `<span style="color: var(--danger);">⛔ Mã này chỉ dành riêng cho Admin!</span>`;
             return;
         }
     }
 
     if (DISCOUNT_CODES[code]) {
         appliedDiscount = DISCOUNT_CODES[code];
-        messageEl.innerHTML = `<span style="color: var(--success);">✓ Áp dụng mã "${code}" thành công! Giảm ${appliedDiscount}%</span>`;
+        messageEl.innerHTML = `<span style="color: green; font-weight: 600;">✓ Áp dụng mã "${code}" thành công! Giảm ${appliedDiscount}%</span>`;
         updatePrices();
     } else {
         messageEl.innerHTML = '<span style="color: var(--danger);">✗ Mã giảm giá không hợp lệ!</span>';
@@ -169,6 +167,7 @@ function applyDiscount() {
     }
 }
 
+// ==== CONFIRM PAYMENT (Bấm nút → tạo đơn → spinner chờ xác nhận) ====
 async function confirmPayment() {
     const cart = getCart();
     if (cart.length === 0) {
@@ -177,93 +176,142 @@ async function confirmPayment() {
     }
 
     const btnConfirm = $("btnConfirmPayment");
-
-    // 🛡️ CHỐNG CLICK NHIỀU LẦN
     btnConfirm.disabled = true;
     btnConfirm.classList.add("btn-disabled");
-    btnConfirm.innerHTML = "⏳ ĐANG KHỞI TẠO ĐƠN HÀNG...";
+    btnConfirm.innerHTML = "⏳ ĐANG XỬ LÝ...";
+
+    const finalAmount = getFinalAmount();
 
     try {
-        const orderData = {
-            totalAmount: subtotal - Math.round(subtotal * appliedDiscount / 100),
-            items: cart
-        };
-
+        // Gửi lên server tạo invoice
         const res = await fetch('api/sepay/create-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderData)
+            body: JSON.stringify({ totalAmount: finalAmount, items: cart })
         });
 
         const result = await res.json();
 
         if (res.ok && result.invoiceId) {
-            const finalId = result.invoiceId;
-            const finalAmount = orderData.totalAmount;
-
-            // ✅ HIỆN MODAL VỚI QR ĐỘNG (VietQR)
-            // Bro cấu hình MB Bank trong link này
-            const bankId = "MB";
-            const accountNo = "3399377355";
-            const template = "compact2";
-            const description = `DH${finalId}`;
-            const accountName = encodeURIComponent("NGUYEN TRI THIEN");
-
-            const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${finalAmount}&addInfo=${description}&accountName=${accountName}`;
-
-            // Tạo giao diện QR trong modal
-            $("successModal").querySelector(".success-content").innerHTML = `
-                <div class="success-icon">💳</div>
-                <h2>Quét mã để thanh toán</h2>
-                <p>Vui lòng quét mã QR dưới đây. Hệ thống sẽ tự động xác nhận đơn hàng sau khi bạn chuyển khoản thành công.</p>
-                
-                <div style="margin: 20px 0; border: 2px solid #6366f1; border-radius: 12px; padding: 10px; background: white;">
-                    <img src="${qrUrl}" style="width: 100%; border-radius: 8px;">
-                </div>
-
-                <p style="font-weight: 700; color: var(--primary);">Số tiền: ${formatVND(finalAmount)}</p>
-                <p style="font-size: 13px; background: #fff3cd; color: #856404; padding: 8px; border-radius: 8px;">
-                    ⚠️ Lưu ý: Giữ nguyên nội dung chuyển khoản <b>${description}</b> để hệ thống tự động nhận diện.
-                </p>
-
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button class="btn btn--ghost" onclick="window.location.href='home.html'" style="flex: 1; justify-content: center;">Về Trang Chủ</button>
-                    <button class="btn btn--primary" onclick="window.location.href='profile.html'" style="flex: 1; justify-content: center;">Lịch sử đơn 👤</button>
-                </div>
-            `;
-
-            $("successModal").classList.add("active");
+            const invoiceId = result.invoiceId;
+            // Hiện spinner chờ SePay xác nhận
+            showWaitingSpinner(invoiceId, finalAmount);
+            // Bắt đầu polling - cứ 5 giây check 1 lần
+            startPollingOrderStatus(invoiceId);
+            // Xóa giỏ hàng
             clearCart();
         } else {
             alert('Lỗi: ' + (result.message || 'Không thể tạo đơn hàng'));
-            btnConfirm.disabled = false;
-            btnConfirm.classList.remove("btn-disabled");
-            btnConfirm.innerHTML = "🚀 THỬ LẠI";
+            resetButton(btnConfirm);
         }
     } catch (e) {
         console.error("Payment error:", e);
-        alert('Lỗi kết nối! Bạn vui lòng kiểm tra mạng và thử lại.');
-        btnConfirm.disabled = false;
-        btnConfirm.classList.remove("btn-disabled");
-        btnConfirm.innerHTML = "🚀 THỬ LẠI";
+        alert('Lỗi kết nối! Vui lòng kiểm tra mạng và thử lại.');
+        resetButton(btnConfirm);
     }
 }
 
-window.goHome = () => {
-    window.location.href = 'home.html';
-};
+function resetButton(btn) {
+    btn.disabled = false;
+    btn.classList.remove("btn-disabled");
+    btn.innerHTML = "✅ ĐÃ CHUYỂN TIỀN - XÁC NHẬN";
+}
 
-// Event listeners
+// ==== SPINNER - Chờ SePay ====
+function showWaitingSpinner(invoiceId, amount) {
+    const modal = $("successModal");
+    const content = modal.querySelector(".success-content");
+
+    content.innerHTML = `
+        <div style="text-align: center; padding: 30px 20px;">
+            <div style="margin: 0 auto 25px; width: 80px; height: 80px; border: 6px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <h2 style="color: #1e40af; margin-bottom: 12px; font-size: 22px;">⏳ Đang chờ xác nhận thanh toán...</h2>
+            <p style="color: #64748b; margin-bottom: 20px; font-size: 15px;">Hệ thống đang tự động kiểm tra giao dịch của bạn qua SePay.</p>
+            
+            <div style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border: 1px solid #86efac; border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+                <p style="color: #166534; font-weight: 800; font-size: 20px; margin: 0 0 8px;">💸 ${formatVND(amount)}</p>
+                <p style="color: #166534; font-size: 14px; margin: 0;">Mã đơn hàng: <b>#${invoiceId}</b></p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; justify-content: center; color: #94a3b8; font-size: 13px;">
+                <div style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite;"></div>
+                Đang lắng nghe phản hồi từ SePay... Vui lòng không đóng trang này.
+            </div>
+        </div>
+    `;
+    modal.classList.add("active");
+}
+
+// ==== POLLING ====
+function startPollingOrderStatus(invoiceId) {
+    let tried = 0;
+    pollingInterval = setInterval(async () => {
+        tried++;
+        try {
+            const res = await fetch(`api/orders/status?invoiceId=${invoiceId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'PAID') {
+                    clearInterval(pollingInterval);
+                    showPaymentSuccess(invoiceId);
+                    return;
+                }
+            }
+        } catch (e) {
+            // Bỏ qua lỗi mạng tạm thời
+        }
+        // Tự dừng sau 5 phút (60 x 5s)
+        if (tried >= 60) {
+            clearInterval(pollingInterval);
+            showPaymentTimeout(invoiceId);
+        }
+    }, 5000);
+}
+
+// ==== THÀNH CÔNG ====
+function showPaymentSuccess(invoiceId) {
+    const modal = $("successModal");
+    const content = modal.querySelector(".success-content");
+
+    content.innerHTML = `
+        <div style="text-align: center; padding: 30px 20px;">
+            <div style="font-size: 72px; margin-bottom: 15px;">🎉</div>
+            <h2 style="color: #166534; margin-bottom: 12px;">Thanh toán thành công!</h2>
+            <p style="color: #64748b; margin-bottom: 8px;">Đơn hàng <b>#${invoiceId}</b> đã được xác nhận.</p>
+            <p style="color: #64748b; margin-bottom: 25px;">Cảm ơn bạn đã mua hàng tại <b>Github Pharmacy</b>! 💚</p>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn--ghost" onclick="window.location.href='home.html'" style="flex: 1; justify-content: center; padding: 14px;">🏠 Trang Chủ</button>
+                <button class="btn btn--primary" onclick="window.location.href='profile.html'" style="flex: 1; justify-content: center; padding: 14px;">📋 Lịch sử đơn</button>
+            </div>
+        </div>
+    `;
+}
+
+// ==== QUÁ THỜI GIAN ====
+function showPaymentTimeout(invoiceId) {
+    const modal = $("successModal");
+    const content = modal.querySelector(".success-content");
+
+    content.innerHTML = `
+        <div style="text-align: center; padding: 30px 20px;">
+            <div style="font-size: 72px; margin-bottom: 15px;">⏰</div>
+            <h2 style="color: #b45309; margin-bottom: 12px;">Chưa nhận được giao dịch</h2>
+            <p style="color: #64748b; margin-bottom: 25px;">Hệ thống chưa nhận được xác nhận trong 5 phút cho đơn <b>#${invoiceId}</b>.<br>Nếu bạn đã chuyển tiền, hãy kiểm tra lại sau ít phút hoặc liên hệ hỗ trợ.</p>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn--ghost" onclick="window.location.href='home.html'" style="flex: 1; justify-content: center; padding: 14px;">🏠 Trang Chủ</button>
+                <button class="btn btn--primary" onclick="window.location.href='profile.html'" style="flex: 1; justify-content: center; padding: 14px;">📋 Kiểm tra đơn</button>
+            </div>
+        </div>
+    `;
+}
+
+// ==== KHỞI ĐỘNG ====
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check login status first
     await checkLoginStatus();
-
     renderOrderItems();
 
     const btnApply = $("btnApplyDiscount");
-    if (btnApply) {
-        btnApply.addEventListener('click', applyDiscount);
-    }
+    if (btnApply) btnApply.addEventListener('click', applyDiscount);
 
     const discountInput = $("discountCode");
     if (discountInput) {
@@ -272,36 +320,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Preview proof image and enable button
-    const proofInput = $("paymentProof");
     const btnConfirm = $("btnConfirmPayment");
-
-    // Disable button by default for bank transfer
-    if (btnConfirm) {
-        btnConfirm.disabled = true;
-        btnConfirm.classList.add("btn-disabled");
-        btnConfirm.textContent = "⏳ VUI LÒNG TẢI ẢNH CHUYỂN KHOẢN";
-    }
-
-    if (proofInput) {
-        proofInput.addEventListener('change', function () {
-            const file = this.files[0];
-            if (file) {
-                // Enable button
-                btnConfirm.disabled = false;
-                btnConfirm.classList.remove("btn-disabled");
-                btnConfirm.textContent = "🚀 XÁC NHẬN THANH TOÁN";
-
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const preview = $("proofPreview");
-                    preview.style.display = "block";
-                    preview.querySelector("img").src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    $("btnConfirmPayment").addEventListener('click', confirmPayment);
+    if (btnConfirm) btnConfirm.addEventListener('click', confirmPayment);
 });

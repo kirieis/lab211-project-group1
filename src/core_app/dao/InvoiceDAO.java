@@ -21,6 +21,7 @@ public class InvoiceDAO {
         String sqlDetail = "INSERT INTO Invoice_Detail (invoice_id, medicine_id, medicine_name, quantity, unit_price, import_price) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection()) {
+            System.out.println("[InvoiceDAO] DB Connection OK");
             conn.setAutoCommit(false);
             try (PreparedStatement psInvoice = conn.prepareStatement(sqlInvoice, Statement.RETURN_GENERATED_KEYS)) {
                 if (invoice.getCustomerId() > 0)
@@ -33,13 +34,17 @@ public class InvoiceDAO {
                 psInvoice.setString(4, invoice.getStatus() != null ? invoice.getStatus() : "PENDING");
                 psInvoice.setString(5, invoice.getPaymentProof());
 
+                System.out.println("[InvoiceDAO] Inserting invoice: customerId=" + invoice.getCustomerId()
+                        + " total=" + invoice.getTotalAmount() + " method=" + invoice.getPaymentMethod());
                 psInvoice.executeUpdate();
 
                 ResultSet rs = psInvoice.getGeneratedKeys();
                 if (rs.next()) {
                     int invId = rs.getInt(1);
+                    System.out.println("[InvoiceDAO] Invoice created with ID: " + invId);
                     try (PreparedStatement psDetail = conn.prepareStatement(sqlDetail)) {
                         for (InvoiceDetail d : invoice.getInvoiceDetails()) {
+                            System.out.println("[InvoiceDAO] Ensuring medicine exists: " + d.getMedicineId());
                             medicineDAO.ensureMedicineExists(d.getMedicineId(), d.getMedicineName(), d.getUnitPrice());
                             double importCost = medicineDAO.getImportPrice(d.getMedicineId());
 
@@ -54,14 +59,21 @@ public class InvoiceDAO {
                         psDetail.executeBatch();
                     }
                     conn.commit();
+                    System.out.println("[InvoiceDAO] Invoice committed successfully: " + invId);
                     return invId;
                 }
+                System.err.println("[InvoiceDAO] ERROR: No generated key returned");
                 conn.rollback();
             } catch (SQLException e) {
                 conn.rollback();
+                System.err.println("[InvoiceDAO] SQL ERROR: " + e.getMessage());
+                e.printStackTrace();
                 throw new RuntimeException("Database Error: " + e.getMessage());
             }
+        } catch (RuntimeException e) {
+            throw e; // Re-throw
         } catch (Exception e) {
+            System.err.println("[InvoiceDAO] CONNECTION ERROR: " + e.getMessage());
             e.printStackTrace();
         }
         return -1;

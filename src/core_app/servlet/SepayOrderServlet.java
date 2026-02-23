@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpSession;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 @WebServlet("/api/sepay/create-order")
 public class SepayOrderServlet extends HttpServlet {
@@ -25,6 +26,7 @@ public class SepayOrderServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
+        PrintWriter out = resp.getWriter();
 
         StringBuilder sb = new StringBuilder();
         try (BufferedReader reader = req.getReader()) {
@@ -33,45 +35,59 @@ public class SepayOrderServlet extends HttpServlet {
                 sb.append(line);
         }
 
+        System.out.println("[SEPAY] Order Request Body: " + sb.toString());
+
         try {
             JsonObject jsonBody = gson.fromJson(sb.toString(), JsonObject.class);
 
             Invoice inv = new Invoice();
             inv.setPaymentMethod("SEPAY");
             inv.setStatus("PENDING");
-            inv.setTotalAmount(jsonBody.get("totalAmount").getAsDouble());
 
             HttpSession session = req.getSession(false);
             if (session != null && session.getAttribute("currentUser") != null) {
                 Customer c = (Customer) session.getAttribute("currentUser");
                 inv.setCustomerId(c.getCustomerId());
+                System.out.println("[SEPAY] Customer ID: " + c.getCustomerId());
+            } else {
+                System.out.println("[SEPAY] WARNING: No logged-in customer");
             }
 
             // Parse items
             if (jsonBody.has("items")) {
                 jsonBody.getAsJsonArray("items").forEach(itemElement -> {
                     JsonObject itemObj = itemElement.getAsJsonObject();
-                    String id = itemObj.get("id").getAsString();
-                    String name = itemObj.get("name").getAsString();
-                    int qty = itemObj.get("qty").getAsInt();
-                    double price = itemObj.get("price").getAsDouble();
+                    String id = itemObj.has("id") ? itemObj.get("id").getAsString() : "UNKNOWN";
+                    String name = itemObj.has("name") ? itemObj.get("name").getAsString() : "Unknown";
+                    int qty = itemObj.has("qty") ? itemObj.get("qty").getAsInt() : 1;
+                    double price = itemObj.has("price") ? itemObj.get("price").getAsDouble() : 0;
+                    System.out.println("[SEPAY] Item: " + id + " | " + name + " | qty=" + qty + " | price=" + price);
                     inv.addInvoiceDetail(new InvoiceDetail(id, name, qty, price));
                 });
             }
 
-            // Save to DB to get Invoice ID
+            // Set totalAmount LAST (preserve discounted price from frontend)
+            double totalAmount = jsonBody.has("totalAmount") ? jsonBody.get("totalAmount").getAsDouble() : 0;
+            inv.setTotalAmount(totalAmount);
+            System.out.println("[SEPAY] Total Amount: " + totalAmount);
+
+            // Save to DB
             int invoiceId = invoiceDAO.addInvoice(inv);
+            System.out.println("[SEPAY] Invoice ID: " + invoiceId);
+
             if (invoiceId == -1) {
-                throw new Exception("Không thể tạo hóa đơn trong hệ thống!");
+                resp.setStatus(500);
+                out.print("{\"status\":\"error\", \"message\":\"Loi luu hoa don vao database. Kiem tra SQL Server.\"}");
+            } else {
+                out.print("{\"status\":\"success\", \"invoiceId\":" + invoiceId + "}");
             }
 
-            // Return invoiceId to frontend to generate QR
-            resp.getWriter().print("{\"status\":\"success\", \"invoiceId\":" + invoiceId + "}");
-
         } catch (Exception e) {
+            System.err.println("[SEPAY] ERROR: " + e.getMessage());
             e.printStackTrace();
             resp.setStatus(500);
-            resp.getWriter().print("{\"status\":\"error\", \"message\":\"" + e.getMessage() + "\"}");
+            String msg = e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Unknown error";
+            out.print("{\"status\":\"error\", \"message\":\"" + msg + "\"}");
         }
     }
 }
