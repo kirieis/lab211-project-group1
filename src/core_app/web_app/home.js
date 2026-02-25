@@ -158,11 +158,18 @@ function parseCSV(text) {
 
 // -------- CSV Loader --------
 // -------- CSV Loader --------
-async function loadProducts() {
+async function loadProducts(skipSkeleton = false) {
   try {
-    // Determine the base URL dynamically or use relative path
-    // For Tomcat deployment, 'data/medicines_clean.csv' relative to 'home.html' works if structure is preserved.
-    const res = await fetch("data/medicines_clean.csv", { cache: "no-store" });
+    // Show a quick loading indicator in the grid ONLY if we don't have cached data
+    const grid = $("allGrid");
+    if (grid && !skipSkeleton) {
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #64748b;">
+        <div class="skeleton-ring"></div>
+        <p style="margin-top: 15px; font-weight: 600;">Đang tải sản phẩm...</p>
+      </div>`;
+    }
+
+    const res = await fetch("data/medicines_clean.csv");
 
     if (!res.ok) {
       throw new Error(`CSV Not Found: ${res.status} ${res.statusText}`);
@@ -570,16 +577,11 @@ function bindEvents() {
   const btnLogin = $("btnLogin");
 
   if (authState.isLoggedIn) {
-    let adminBtn = "";
-    if (authState.role === "ADMIN") {
-      adminBtn = `<a href="/admin/users" class="btn btn--primary" style="text-decoration: none; margin-right: 10px;">🛡️ Admin</a>`;
-    }
-    // Show username as link to profile page
+    // Show username as link to profile page (Admin button removed as requested)
     userMenuContainer.innerHTML = `
-      <div style="display: flex; align-items: center;">
-        ${adminBtn}
-        <a href="profile.html" class="btn btn--ghost" style="text-decoration: none;">
-          👤 ${escapeHtml(authState.fullName)}
+      <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+        <a href="profile.html" class="btn btn--ghost" style="text-decoration: none; flex: 1; justify-content: center;">
+          👤 ${escapeHtml(authState.fullName.split(' ').pop())}
         </a>
       </div>
     `;
@@ -628,12 +630,64 @@ function debounce(fn, ms) {
 
 // -------- Boot --------
 (async function init() {
-  try {
-    const authRes = await fetch("api/auth-status");
-    if (authRes.ok) window.authState = await authRes.json();
-  } catch (e) { }
+  // 1. Instant Render from Cache (Stale-While-Revalidate)
+  const cachedAuth = localStorage.getItem("cache_auth");
+  const cachedProducts = localStorage.getItem("cache_products");
 
-  state.products = await loadProducts();
-  bindEvents();
-  renderAllSections();
+  if (cachedAuth) {
+    window.authState = JSON.parse(cachedAuth);
+  }
+  if (cachedProducts) {
+    state.products = JSON.parse(cachedProducts);
+    bindEvents();
+    renderAllSections();
+  }
+
+  try {
+    // 2. Fetch fresh data in background
+    const [authRes, freshProducts] = await Promise.all([
+      fetch("api/auth-status").then(r => r.ok ? r.json() : null).catch(() => null),
+      loadProducts(true) // Pass true to skip initial grid clearing if we already have cache
+    ]);
+
+    // 3. Update state and cache if changed
+    let needsReRender = false;
+
+    if (authRes) {
+      const authStr = JSON.stringify(authRes);
+      if (authStr !== cachedAuth) {
+        window.authState = authRes;
+        localStorage.setItem("cache_auth", authStr);
+        needsReRender = true;
+      }
+    } else {
+      // Server says guest, but cache says user -> Clear it!
+      if (cachedAuth) {
+        window.authState = null;
+        localStorage.removeItem("cache_auth");
+        needsReRender = true;
+      }
+    }
+
+    if (freshProducts && freshProducts.length > 0) {
+      const productsStr = JSON.stringify(freshProducts);
+      if (productsStr !== cachedProducts) {
+        state.products = freshProducts;
+        localStorage.setItem("cache_products", productsStr);
+        needsReRender = true;
+      }
+    }
+
+    // 4. Final render if first time or data changed
+    if (!cachedProducts || needsReRender) {
+      if (!cachedProducts) bindEvents();
+      renderAllSections();
+    }
+  } catch (e) {
+    console.error("Init failed:", e);
+    if (!cachedProducts) {
+      bindEvents();
+      renderAllSections();
+    }
+  }
 })();

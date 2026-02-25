@@ -18,7 +18,7 @@ public class InvoiceDAO {
     public int addInvoice(Invoice invoice) {
         String sqlInvoice = "INSERT INTO Invoice (customer_id, total_amount, payment_method, status, payment_proof) VALUES (?, ?, ?, ?, ?)";
         // Added import_price to track profit per sale
-        String sqlDetail = "INSERT INTO Invoice_Detail (invoice_id, medicine_id, medicine_name, quantity, unit_price, import_price) VALUES (?, ?, ?, ?, ?, ?)";
+        String sqlDetail = "INSERT INTO Invoice_Detail (invoice_id, medicine_id, medicine_name, quantity, unit_price) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection()) {
             System.out.println("[InvoiceDAO] DB Connection OK");
@@ -42,22 +42,35 @@ public class InvoiceDAO {
                 if (rs.next()) {
                     int invId = rs.getInt(1);
                     System.out.println("[InvoiceDAO] Invoice created with ID: " + invId);
+
+                    // Đảm bảo tất cả medicine tồn tại TRƯỚC KHI insert detail (dùng connection
+                    // riêng, auto-commit)
+                    for (InvoiceDetail d : invoice.getInvoiceDetails()) {
+                        String mId = d.getMedicineId();
+                        if (mId == null || mId.trim().isEmpty())
+                            mId = "UNKNOWN";
+                        mId = mId.trim();
+                        medicineDAO.ensureMedicineExists(mId, d.getMedicineName(), d.getUnitPrice());
+                    }
+
+                    // Insert detail (không có import_price để tránh lỗi cột thiếu)
                     try (PreparedStatement psDetail = conn.prepareStatement(sqlDetail)) {
                         for (InvoiceDetail d : invoice.getInvoiceDetails()) {
-                            System.out.println("[InvoiceDAO] Ensuring medicine exists: " + d.getMedicineId());
-                            medicineDAO.ensureMedicineExists(d.getMedicineId(), d.getMedicineName(), d.getUnitPrice());
-                            double importCost = medicineDAO.getImportPrice(d.getMedicineId());
+                            String mId = d.getMedicineId();
+                            if (mId == null || mId.trim().isEmpty())
+                                mId = "UNKNOWN";
+                            mId = mId.trim();
 
                             psDetail.setInt(1, invId);
-                            psDetail.setString(2, d.getMedicineId());
+                            psDetail.setString(2, mId);
                             psDetail.setString(3, d.getMedicineName());
                             psDetail.setInt(4, d.getQuantity());
                             psDetail.setDouble(5, d.getUnitPrice());
-                            psDetail.setDouble(6, importCost);
                             psDetail.addBatch();
                         }
                         psDetail.executeBatch();
                     }
+
                     conn.commit();
                     System.out.println("[InvoiceDAO] Invoice committed successfully: " + invId);
                     return invId;
@@ -186,10 +199,28 @@ public class InvoiceDAO {
                 PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, status);
             ps.setInt(2, orderId);
-            return ps.executeUpdate() > 0;
+            int rows = ps.executeUpdate();
+            System.out.println("[InvoiceDAO] updateStatus: orderId=" + orderId + " status=" + status + " rows=" + rows);
+            return rows > 0;
         } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] updateStatus ERROR: " + e.getMessage());
             e.printStackTrace();
         }
         return false;
+    }
+
+    public String getInvoiceStatus(int invoiceId) {
+        String sql = "SELECT status FROM Invoice WHERE invoice_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, invoiceId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getString("status");
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] getInvoiceStatus ERROR: " + e.getMessage());
+        }
+        return null;
     }
 }

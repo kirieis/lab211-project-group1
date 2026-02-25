@@ -2,6 +2,7 @@ package core_app.dao;
 
 import core_app.model.Customer;
 import core_app.util.DBConnection;
+import org.mindrot.jbcrypt.BCrypt;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,14 +10,24 @@ import java.util.List;
 public class CustomerDAO {
 
     public Customer authenticate(String username, String password) {
-        String sql = "SELECT * FROM Customer WHERE username = ? AND password = ?";
+        String sql = "SELECT * FROM Customer WHERE username = ?";
         try (Connection conn = DBConnection.getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
-            ps.setString(2, password);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToCustomer(rs);
+                    String storedHash = rs.getString("password");
+                    // Kiểm tra mật khẩu bằng BCrypt (Hàng hiệu Siêu VIP)
+                    if (storedHash != null && (storedHash.startsWith("$2a$") || storedHash.startsWith("$2b$"))) {
+                        if (BCrypt.checkpw(password, storedHash)) {
+                            return mapResultSetToCustomer(rs);
+                        }
+                    } else {
+                        // Fallback cho mật khẩu cũ (plain text) - nên update sau
+                        if (password.equals(storedHash)) {
+                            return mapResultSetToCustomer(rs);
+                        }
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -49,7 +60,11 @@ public class CustomerDAO {
             ps.setString(3, c.getAddress());
             ps.setString(4, c.getEmail());
             ps.setString(5, c.getUsername());
-            ps.setString(6, c.getPassword());
+
+            // Băm mặt khẩu trước khi lưu (Siêu VIP)
+            String hashedPassword = BCrypt.hashpw(c.getPassword(), BCrypt.gensalt(12));
+            ps.setString(6, hashedPassword);
+
             ps.setString(7, c.getRole());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {

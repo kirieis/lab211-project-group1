@@ -167,6 +167,40 @@
             msgBox.textContent = '❌ Sai tên đăng nhập hoặc mật khẩu!';
         }
 
+        // Form Submission Logic
+        const loginForm = document.querySelector('form');
+        loginForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new URLSearchParams(new FormData(loginForm));
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+
+                    // SAVE TO CACHE IMMEDIATELY
+                    localStorage.setItem('cache_auth', JSON.stringify(userData));
+
+                    // Proceed to home
+                    window.location.href = 'home.html';
+                } else {
+                    window.location.href = 'login.html?error=true';
+                }
+            } catch (err) {
+                console.error("Login fetch error:", err);
+                window.location.href = 'login.html?error=true';
+            }
+        });
+
         // Password Toggle Logic
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');

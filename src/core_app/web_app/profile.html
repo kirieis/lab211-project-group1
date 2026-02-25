@@ -70,7 +70,8 @@
                     <div id="adminLinkContainer"></div>
                 </nav>
 
-                <button class="profile-logout" onclick="window.location.href='logout'">
+                <button class="profile-logout"
+                    onclick="localStorage.removeItem('cache_auth'); window.location.href='logout'">
                     🚪 Đăng xuất
                 </button>
             </aside>
@@ -147,7 +148,18 @@
         </div>
     </footer>
 
+    <!-- SUCCESS/QR MODAL -->
+    <div class="success-modal" id="successModal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="success-content"
+            style="background: white; border-radius: 16px; padding: 30px; text-align: center; max-width: 400px; width: 90%; position: relative;">
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
     <script>
+        let pollingInterval = null;
+
         // 1. Fetch real auth state from server
         async function loadProfile() {
             try {
@@ -208,14 +220,15 @@
                 const summaryTotal = document.getElementById('summaryTotal');
                 const summaryCount = document.getElementById('summaryCount');
 
-                if (!orders || orders.length === 0) {
-                    console.log("No orders found for this user.");
-                    return;
-                }
-
-                const paidOrders = orders.filter(o => o.status === 'PAID');
+                const paidOrders = (orders || []).filter(o => o.status === 'PAID');
                 summaryCount.textContent = paidOrders.length;
                 let totalSpent = paidOrders.reduce((sum, o) => sum + o.total, 0);
+
+                if (!orders || orders.length === 0) {
+                    historyTab.innerHTML = `<h2 class="profile-heading">Lịch sử mua hàng</h2><div class="empty-state">Bạn chưa có đơn hàng nào.</div>`;
+                    summaryTotal.textContent = "0đ";
+                    return;
+                }
 
                 const renderOrder = (o) => {
                     const dateStr = `${o.day}/${o.month}/${o.year}`;
@@ -258,8 +271,14 @@
                                 `).join('')}
                             </div>
                             ${o.status === 'PENDING' ? `
-                                <div style="margin-top: 10px; padding: 8px; background: #f8fafc; border-radius: 8px; font-size: 11px; color: #64748b; font-style: italic;">
-                                    💡 Hệ thống đang chờ Admin xác nhận giao dịch của bạn.
+                                <div style="margin-top: 10px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                                    <div style="font-size: 11px; color: #64748b; font-style: italic; margin-bottom: 10px;">
+                                        💡 Đơn hàng đang chờ thanh toán qua ngân hàng.
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button onclick="showQR(${o.id}, ${o.total})" style="flex: 1; padding: 8px; background: #6366f1; color: white; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">💳 Thanh toán / Xem mã QR</button>
+                                        <button onclick="cancelOrder(${o.id})" style="padding: 8px; background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">✕ Hủy đơn</button>
+                                    </div>
                                 </div>
                             ` : ''}
                         </div>
@@ -268,11 +287,100 @@
 
                 historyTab.innerHTML = `<h2 class="profile-heading">Lịch sử mua hàng</h2>` + orders.map(renderOrder).join('');
                 if (overviewList) {
-                    overviewList.parentElement.innerHTML = `<h3 style="margin-bottom: 16px;">Đơn hàng gần đây</h3>` + orders.slice(0, 2).map(renderOrder).join('');
+                    overviewList.parentElement.innerHTML = `<h3 style="margin-bottom: 16px;">Đơn hàng gần đây</h3>` + orders.slice(0, 3).map(renderOrder).join('');
+                } else {
+                    // Update content if empty state was replaced
+                    const recentHeader = document.querySelector('#tab-overview h3');
+                    if (recentHeader && recentHeader.nextElementSibling) {
+                        recentHeader.nextElementSibling.outerHTML = orders.slice(0, 3).map(renderOrder).join('');
+                    }
                 }
                 summaryTotal.textContent = totalSpent.toLocaleString('vi-VN') + "đ";
             } catch (e) {
                 console.error("Order fetch error", e);
+            }
+        }
+
+        // ==== MODAL QR ====
+        function showQR(id, amount) {
+            const modal = document.getElementById('successModal');
+            const body = document.getElementById('modalBody');
+            const qrUrl = `https://qr.sepay.vn/img?bank=MB&acc=3399377355&template=compact&amount=${amount}&des=DH${id}`;
+
+            body.innerHTML = `
+                <div style="padding: 5px;">
+                    <div style="text-align: right; margin-bottom: -10px;">
+                        <button onclick="closeModal()" style="background:none; border:none; font-size: 24px; cursor:pointer; color:#94a3b8;">&times;</button>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-weight: 800; font-size: 18px; color: #1e293b;">Thanh toán đơn #${id}</div>
+                        <div style="font-size: 13px; color: #64748b;">Mở app ngân hàng để quét mã VietQR</div>
+                    </div>
+                    
+                    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                        <img src="${qrUrl}" style="width: 100%; max-width: 220px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 15px; text-align: left;">
+                         <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span style="font-size: 12px; color: #64748b;">Tổng tiền:</span>
+                            <span style="font-weight: 800; color: #dc2626;">${amount.toLocaleString('vi-VN')}đ</span>
+                         </div>
+                         <div style="display:flex; justify-content:space-between;">
+                            <span style="font-size: 12px; color: #64748b;">Nội dung:</span>
+                            <span style="font-weight: 800; color: #1e3a8a;">DH${id}</span>
+                         </div>
+                    </div>
+
+                    <div id="pollingStatus" style="font-size: 12px; color: #6366f1; font-weight: 600; display:flex; align-items:center; justify-content:center; gap: 8px;">
+                        <div style="width: 14px; height: 14px; border: 2px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        Đang chờ hệ thống xác thực...
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+            startPolling(id);
+        }
+
+        function closeModal() {
+            document.getElementById('successModal').style.display = 'none';
+            if (pollingInterval) clearInterval(pollingInterval);
+        }
+
+        function startPolling(id) {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`api/orders/status?invoiceId=${id}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.status === 'PAID') {
+                            clearInterval(pollingInterval);
+                            alert("✅ Thanh toán hoàn tất!");
+                            location.reload();
+                        }
+                    }
+                } catch (e) { }
+            }, 5000);
+        }
+
+        async function cancelOrder(id) {
+            if (!confirm(`Bạn có chắc muốn hủy đơn hàng #${id}?`)) return;
+            try {
+                const res = await fetch('api/orders', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: id, status: 'CANCELLED' })
+                });
+                if (res.ok) {
+                    alert("🗑️ Đơn hàng đã được hủy.");
+                    location.reload();
+                } else {
+                    const data = await res.json();
+                    alert("Lỗi: " + (data.message || "Không thể hủy đơn."));
+                }
+            } catch (e) {
+                alert("Lỗi kết nối server.");
             }
         }
 
@@ -287,9 +395,19 @@
 
             // Update sidebar active state
             document.querySelectorAll('.profile-nav__item').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            // currentTarget check
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
         }
     </script>
+    <style>
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </body>
 
 </html>

@@ -26,16 +26,34 @@ public class LoginServlet extends HttpServlet {
 
         Customer customer = customerDAO.authenticate(u, p);
 
+        // Check if it's an AJAX request (looking for X-Requested-With or similar, but
+        // let's check Accept header)
+        String acceptHeader = req.getHeader("Accept");
+        boolean isAjax = acceptHeader != null && acceptHeader.contains("application/json");
+
         if (customer != null) {
-            // Login success
             HttpSession session = req.getSession();
             session.setAttribute("currentUser", customer);
 
-            // Redirect to home
-            resp.sendRedirect("home.html");
+            if (isAjax) {
+                resp.setContentType("application/json");
+                resp.setCharacterEncoding("UTF-8");
+                // Return simple JSON with user info for caching
+                String json = String.format(
+                        "{\"status\":\"success\", \"isLoggedIn\":true, \"fullName\":\"%s\", \"role\":\"%s\", \"username\":\"%s\"}",
+                        customer.getFullName(), customer.getRole(), customer.getUsername());
+                resp.getWriter().print(json);
+            } else {
+                resp.sendRedirect("home.html");
+            }
         } else {
-            // Login failed
-            resp.sendRedirect("login.html?error=true");
+            if (isAjax) {
+                resp.setStatus(401);
+                resp.setContentType("application/json");
+                resp.getWriter().print("{\"status\":\"error\", \"message\":\"Invalid credentials\"}");
+            } else {
+                resp.sendRedirect("login.html?error=true");
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ package core_app.servlet;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import core_app.dao.InvoiceDAO;
+import core_app.dao.MedicineDAO;
 import core_app.model.Customer;
 import core_app.model.Invoice;
 import core_app.model.InvoiceDetail;
@@ -20,6 +21,7 @@ import java.io.PrintWriter;
 @WebServlet("/api/sepay/create-order")
 public class SepayOrderServlet extends HttpServlet {
     private final InvoiceDAO invoiceDAO = new InvoiceDAO();
+    private final MedicineDAO medicineDAO = new MedicineDAO();
     private final Gson gson = new Gson();
 
     @Override
@@ -57,11 +59,20 @@ public class SepayOrderServlet extends HttpServlet {
             if (jsonBody.has("items")) {
                 jsonBody.getAsJsonArray("items").forEach(itemElement -> {
                     JsonObject itemObj = itemElement.getAsJsonObject();
-                    String id = itemObj.has("id") ? itemObj.get("id").getAsString() : "UNKNOWN";
+                    String id = (itemObj.has("id") && !itemObj.get("id").isJsonNull())
+                            ? itemObj.get("id").getAsString().trim()
+                            : "UNKNOWN";
+                    if (id.isEmpty())
+                        id = "UNKNOWN";
                     String name = itemObj.has("name") ? itemObj.get("name").getAsString() : "Unknown";
                     int qty = itemObj.has("qty") ? itemObj.get("qty").getAsInt() : 1;
                     double price = itemObj.has("price") ? itemObj.get("price").getAsDouble() : 0;
                     System.out.println("[SEPAY] Item: " + id + " | " + name + " | qty=" + qty + " | price=" + price);
+
+                    // Đảm bảo thuốc tồn tại trong DB trước khi thêm chi tiết hóa đơn (Sửa lỗi
+                    // FOREIGN KEY)
+                    medicineDAO.ensureMedicineExists(id, name, price);
+
                     inv.addInvoiceDetail(new InvoiceDetail(id, name, qty, price));
                 });
             }

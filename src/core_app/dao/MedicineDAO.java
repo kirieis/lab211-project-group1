@@ -9,72 +9,75 @@ import java.sql.SQLException;
 public class MedicineDAO {
 
     /**
-     * Checks if a medicine exists by ID. If not, it creates a placeholder record.
-     * This prevents Foreign Key constraints from failing during Order Checkout
-     * if the DB is empty but the Frontend has data from CSV.
+     * Đảm bảo thuốc tồn tại trong DB.
+     * Nếu chưa có -> tự tạo bản ghi placeholder.
+     * Dùng connection riêng (auto-commit) để tránh conflict với transaction chính.
      */
     public void ensureMedicineExists(String id, String name, double sellingPrice) {
+        if (id == null || id.trim().isEmpty()) {
+            System.err.println("⚠️ [MedicineDAO] Skipping null/empty medicine ID");
+            return;
+        }
+        id = id.trim();
+
         String checkSql = "SELECT COUNT(*) FROM Medicine WHERE medicine_id = ?";
-        // Added import_price column logic
-        String insertSql = "INSERT INTO Medicine (medicine_id, name, price, import_price, quantity, unit, dosage_form, manufacturer) "
-                +
-                "VALUES (?, ?, ?, ?, 100, 'Viên', 'Viên', 'Unknown')";
+        String insertSql = "INSERT INTO Medicine (medicine_id, name, price, quantity, unit, dosage_form, manufacturer) "
+                + "VALUES (?, ?, ?, 100, N'Viên', N'Tablet', N'Unknown')";
 
-        try (Connection conn = DBConnection.getConnection();
-                PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
+        // Dùng connection RIÊNG (auto-commit = true) để INSERT được commit ngay lập tức
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(true); // QUAN TRỌNG: commit ngay, không chờ transaction
 
-            checkPs.setString(1, id);
-            ResultSet rs = checkPs.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0) {
-                // Exists
-                return;
+            // 1. Kiểm tra đã tồn tại chưa
+            try (PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
+                checkPs.setString(1, id);
+                ResultSet rs = checkPs.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    System.out.println("✅ [MedicineDAO] Medicine exists: " + id);
+                    return; // Đã có rồi, không cần insert
+                }
             }
 
-            // Does not exist, insert it
+            // 2. Chưa có -> Insert
+            System.out.println("🔧 [MedicineDAO] Creating medicine: " + id + " | " + name);
             try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
                 insertPs.setString(1, id);
-                // Truncate name if too long (max 100)
-                if (name.length() > 100)
-                    name = name.substring(0, 100);
-                insertPs.setString(2, name);
-
-                // Price is INT in DB currently, casting it
+                // Cắt tên nếu quá dài
+                String safeName = (name != null && name.length() > 100) ? name.substring(0, 100) : name;
+                insertPs.setString(2, safeName != null ? safeName : "Unknown");
                 insertPs.setInt(3, (int) sellingPrice);
-                // Estimate import price as 70% of selling price
-                insertPs.setInt(4, (int) (sellingPrice * 0.7));
-
-                insertPs.executeUpdate();
-                System.out.println("✅ MedicineDAO: Auto-created missing medicine: " + id);
+                int rows = insertPs.executeUpdate();
+                System.out.println("✅ [MedicineDAO] Created medicine: " + id + " (rows=" + rows + ")");
             }
 
         } catch (SQLException e) {
-            System.err.println("⚠️ MedicineDAO Warning: Failed to ensure medicine existence: " + e.getMessage());
-            // Consume error, don't crash main flow, but insert might fail later
+            // IN LỖI RA ĐỂ BIẾT TẠI SAO FAIL
+            System.err.println("🔴 [MedicineDAO] FAILED to ensure medicine: " + id);
+            System.err.println("🔴 [MedicineDAO] Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
+    /**
+     * Overload: chấp nhận connection từ bên ngoài (dùng trong InvoiceDAO)
+     */
+    public void ensureMedicineExists(Connection existingConn, String id, String name, double sellingPrice) {
+        // Gọi lại method chính - luôn dùng connection riêng để đảm bảo commit
+        ensureMedicineExists(id, name, sellingPrice);
+    }
+
     public double getImportPrice(String medicineId) {
-        String sql = "SELECT import_price, price FROM Medicine WHERE medicine_id = ?";
+        String sql = "SELECT price FROM Medicine WHERE medicine_id = ?";
         try (Connection conn = DBConnection.getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, medicineId);
+            ps.setString(1, medicineId != null ? medicineId.trim() : "");
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                // Check if column exists or try/catch around getting import_price if schema
-                // update failed?
-                // Assuming SchemaUpdate run before this.
-                try {
-                    double importPrice = rs.getDouble("import_price");
-                    if (importPrice > 0)
-                        return importPrice;
-                } catch (SQLException ex) {
-                    // Column might not exist yet if SchemaUpdate failed
-                }
-                // Fallback if 0 or column missing: 70% of price
+                // Fallback: 70% of selling price as estimated import price
                 return rs.getInt("price") * 0.7;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("⚠️ [MedicineDAO] getImportPrice error: " + e.getMessage());
         }
         return 0;
     }

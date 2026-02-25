@@ -140,9 +140,9 @@ public class OrderServlet extends HttpServlet {
 
         HttpSession session = req.getSession(false);
         Customer user = (session != null) ? (Customer) session.getAttribute("currentUser") : null;
-        if (user == null || !"ADMIN".equals(user.getRole())) {
-            resp.setStatus(403);
-            resp.getWriter().print("{\"status\":\"error\", \"message\":\"Access denied\"}");
+        if (user == null) {
+            resp.setStatus(401);
+            resp.getWriter().print("{\"status\":\"error\", \"message\":\"Unauthorized\"}");
             return;
         }
 
@@ -156,12 +156,43 @@ public class OrderServlet extends HttpServlet {
 
         try {
             int orderId = Integer.parseInt(val(body, "orderId"));
-            String status = val(body, "status");
+            String newStatus = val(body, "status");
 
-            if (invoiceDAO.updateStatus(orderId, status)) {
-                resp.getWriter().print("{\"status\":\"success\"}");
+            // Lấy trạng thái hiện tại và chủ sở hữu của đơn hàng
+            String currentStatus = invoiceDAO.getInvoiceStatus(orderId);
+            Invoice existingInvoice = null;
+
+            // Tìm đơn hàng này thuộc về ai (có thể tối ưu thêm trong DAO sau)
+            List<Invoice> userOrders = invoiceDAO.getInvoicesByCustomerId(user.getCustomerId());
+            boolean isOwnOrder = false;
+            for (Invoice o : userOrders) {
+                if (o.getInvoiceId() == orderId) {
+                    isOwnOrder = true;
+                    existingInvoice = o;
+                    break;
+                }
+            }
+
+            boolean canUpdate = false;
+
+            // Case 1: Admin có quyền đổi sang bất kỳ trạng thái nào
+            if ("ADMIN".equals(user.getRole())) {
+                canUpdate = true;
+            }
+            // Case 2: User tự hủy đơn của mình nếu đang PENDING
+            else if (isOwnOrder && "CANCELLED".equals(newStatus) && "PENDING".equals(currentStatus)) {
+                canUpdate = true;
+            }
+
+            if (canUpdate) {
+                if (invoiceDAO.updateStatus(orderId, newStatus)) {
+                    resp.getWriter().print("{\"status\":\"success\"}");
+                } else {
+                    resp.getWriter().print("{\"status\":\"error\", \"message\":\"Update failed\"}");
+                }
             } else {
-                resp.getWriter().print("{\"status\":\"error\", \"message\":\"Update failed\"}");
+                resp.setStatus(403);
+                resp.getWriter().print("{\"status\":\"error\", \"message\":\"Permission denied\"}");
             }
         } catch (Exception e) {
             resp.setStatus(500);

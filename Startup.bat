@@ -7,9 +7,15 @@ echo   GITHUB PHARMACY - KHOI DONG HE THONG
 echo ============================================
 echo.
 
+:: Cau xhinh API Key bao mat cho Webhook (Khop voi SePay Dashboard)
+set SEPAY_WEBHOOK_KEY=FinTheWhale#3636
+
+:: Loc IP Webhook (Dat * de cho phep tat ca, hoac dien IP cua SePay de sieu bao mat)
+set SEPAY_ALLOWED_IP=*
+
 :: Buoc 1: Chay Tomcat Server (cua so rieng)
 echo [1/2] Dang khoi dong Tomcat Server (port 8081)...
-start "Tomcat Server" cmd /k "cd /d %~dp0 && mvn clean package cargo:run"
+start "Tomcat Server" cmd /k "cd /d %~dp0 && set SEPAY_WEBHOOK_KEY=%SEPAY_WEBHOOK_KEY% && set SEPAY_ALLOWED_IP=%SEPAY_ALLOWED_IP% && mvn clean package cargo:run"
 
 :: Cho 5 giay de Tomcat bat dau khoi dong
 timeout /t 5 /nobreak >nul

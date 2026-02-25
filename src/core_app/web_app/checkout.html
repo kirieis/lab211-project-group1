@@ -251,47 +251,26 @@
             <div class="checkout-box">
                 <h2>💳 Thanh toán chuyển khoản</h2>
 
-                <div class="payment-intro" style="text-align: center; padding: 10px 0;">
-                    <p style="font-weight: 700; color: var(--primary); margin-bottom: 15px; font-size: 16px;">📱 QUÉT MÃ
-                        QR ĐỂ THANH TOÁN</p>
-
-                    <div
-                        style="margin: 0 auto 15px; border: 3px solid #6366f1; border-radius: 20px; padding: 10px; background: white; max-width: 280px; box-shadow: var(--shadow-lg);">
-                        <img src="qr_sepay.png" alt="QR Thanh Toán SePay"
-                            style="width: 100%; border-radius: 12px; display: block;">
-                    </div>
-                </div>
-
-                <!-- Thông tin chuyển khoản -->
+                <!-- Khu vực Thanh toán tinh gọn -->
                 <div
-                    style="background: linear-gradient(135deg, #eef2ff, #e0e7ff); border: 2px solid #a5b4fc; border-radius: 16px; padding: 20px; margin: 10px 0;">
-                    <p
-                        style="font-weight: 800; color: #1e40af; font-size: 15px; margin-bottom: 14px; text-align: center;">
-                        📋 THÔNG TIN CHUYỂN KHOẢN</p>
-
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #c7d2fe;">
-                        <span style="color: #64748b; font-size: 14px;">💰 Số tiền:</span>
-                        <span id="transferAmount" style="color: #dc2626; font-weight: 800; font-size: 20px;">0đ</span>
-                    </div>
-
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #c7d2fe;">
-                        <span style="color: #64748b; font-size: 14px;">📝 Nội dung CK:</span>
-                        <span id="transferContent"
-                            style="color: #1e40af; font-weight: 800; font-size: 16px; background: #fff; padding: 4px 12px; border-radius: 8px; border: 1px solid #a5b4fc;">...</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                        <span style="color: #64748b; font-size: 14px;">🏦 Ngân hàng:</span>
-                        <span style="color: #1e40af; font-weight: 700; font-size: 14px;">MB Bank - NGUYEN TRI
-                            THIEN</span>
-                    </div>
-
-                    <p
-                        style="text-align: center; margin-top: 10px; font-size: 12px; color: #f59e0b; background: #fffbeb; padding: 8px; border-radius: 8px; border: 1px solid #fde68a;">
-                        ⚠️ <b>GHI ĐÚNG NỘI DUNG</b> để hệ thống tự nhận diện giao dịch
+                    style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 20px; padding: 25px; text-align: center; margin: 20px 0;">
+                    <div style="font-size: 40px; margin-bottom: 15px;">💳</div>
+                    <h3 style="color: #1e293b; margin-bottom: 10px;">Thanh toán Ngân hàng (SePay)</h3>
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">
+                        Quét mã VietQR để hệ thống tự động xác nhận đơn hàng của bạn ngay lập tức.
                     </p>
+
+                    <ul
+                        style="text-align: left; display: inline-block; color: #475569; font-size: 13px; margin-bottom: 25px; list-style: none; padding: 0;">
+                        <li style="margin-bottom: 8px;">✅ Tự động điền số tiền và nội dung</li>
+                        <li style="margin-bottom: 8px;">✅ Xử lý nhanh 24/7 (kể cả ban đêm)</li>
+                        <li>✅ Bảo mật tối đa qua NAPAS 247</li>
+                    </ul>
+
+                    <button class="btn btn--primary" id="btnConfirmPayment"
+                        style="width: 100%; justify-content: center; padding: 20px; font-size: 17px; font-weight: 800; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4); transition: all 0.3s; transform: scale(1.02);">
+                        🚀 XÁC NHẬN VÀ HIỆN MÃ QR
+                    </button>
                 </div>
 
                 <style>
@@ -307,24 +286,7 @@
                             transform: rotate(360deg);
                         }
                     }
-
-                    @keyframes pulse {
-
-                        0%,
-                        100% {
-                            opacity: 1;
-                        }
-
-                        50% {
-                            opacity: 0.3;
-                        }
-                    }
                 </style>
-
-                <button class="btn btn--primary" id="btnConfirmPayment"
-                    style="width: 100%; justify-content: center; padding: 18px; font-size: 16px; font-weight: 800; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3); transition: all 0.3s;">
-                    ✅ ĐÃ CHUYỂN TIỀN - XÁC NHẬN
-                </button>
             </div>
         </div>
     </main>
