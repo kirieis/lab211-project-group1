@@ -19,40 +19,6 @@ const state = {
 };
 
 // Removed local i18n object - now using global i18n.js
-const txt = (key) => {
-  const dotIndex = key.indexOf('.');
-  if (dotIndex > -1) {
-    return window.t ? window.t(key.substring(0, dotIndex), key.substring(dotIndex + 1)) : key;
-  }
-  // Fallback order: home -> common
-  return window.t ? window.t('home', key) : key;
-};
-
-// -------- Localization --------
-function updateLocale() {
-  if (typeof translateAll === 'function') {
-    translateAll();
-  }
-
-  const langBtn = $("btnLang");
-  if (langBtn) {
-    langBtn.innerHTML = currentLang === "vi" ? "VIE" : "ENG";
-    langBtn.title = currentLang === "vi" ? "Tiếng Việt" : "English";
-  }
-}
-
-function switchLanguage() {
-  const newLang = currentLang === "vi" ? "en" : "vi";
-  setLanguage(newLang);
-  // Re-render everything that uses dynamic strings
-  renderAllSections();
-}
-
-// Listen for global language changes
-window.addEventListener('langChanged', (e) => {
-  state.lang = e.detail;
-  updateLocale();
-});
 
 const $ = (id) => document.getElementById(id);
 
@@ -78,7 +44,7 @@ function showToast(msg) {
     t.className = "toast";
     document.body.appendChild(t);
   }
-  t.innerHTML = `🛒 <span>${msg}</span> ${txt('toast_added')}`;
+  t.innerHTML = `🛒 <span>${msg}</span> ${'đã được thêm vào giỏ!'}`;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 3000);
 }
@@ -336,7 +302,7 @@ function productCard(p) {
     : `<span class="tag">NEW</span>`;
 
   // Display base price on card
-  const unitLabel = p.isLiquid ? txt('unit_bottle') : txt('unit_pill');
+  const unitLabel = p.isLiquid ? 'chai' : 'viên';
 
   const { final } = calculateDisplayPrice(p, p.isLiquid ? "Chai" : "Viên");
 
@@ -350,8 +316,8 @@ function productCard(p) {
         <div>
           <h3 class="card__name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
           <div class="card__meta">
-            <div class="line">${txt('card.code')}: <b>${escapeHtml(p.id)}</b></div>
-            <div class="line">${txt('card.type')}: <b>${escapeHtml(p.dosageForm)}</b> • ${txt('card.exp')}: <b>${escapeHtml(p.date)}</b></div>
+            <div class="line">${'Mã'}: <b>${escapeHtml(p.id)}</b></div>
+            <div class="line">${'Loại'}: <b>${escapeHtml(p.dosageForm)}</b> • ${'HSD'}: <b>${escapeHtml(p.date)}</b></div>
           </div>
         </div>
         ${saleTag}
@@ -362,8 +328,8 @@ function productCard(p) {
       </div>
 
       <div class="card__actions">
-        <button class="btn btn--buy" onclick="openModal('${p.id}', true)">${txt('card.buy').toUpperCase()}</button>
-        <button class="btn btn--add" onclick="openModal('${p.id}', false)">+ ${txt('nav_cart')}</button>
+        <button class="btn btn--buy" onclick="openModal('${p.id}', true)">MUA</button>
+        <button class="btn btn--add" onclick="openModal('${p.id}', false)">+ GIỎ HÀNG</button>
       </div>
     </article>
   `;
@@ -381,19 +347,19 @@ window.openModal = (id, buyNow) => {
   isBuyNow = buyNow;
 
   $("modalName").textContent = p.name;
-  $("modalMeta").textContent = `${txt('lbl_code')}: ${p.id} • ${txt('lbl_type')}: ${p.dosageForm}`;
+  $("modalMeta").textContent = `${'Mã'}: ${p.id} • ${'Loại'}: ${p.dosageForm}`;
 
   // Populate Unit Selector based on product type
   const select = $("modalUnit");
   const vi = state.lang === "vi";
   if (p.isLiquid) {
-    select.innerHTML = `<option value="Chai">${txt('unit_bottle')}</option>`;
+    select.innerHTML = `<option value="Chai">${'chai'}</option>`;
     select.value = "Chai";
   } else {
     select.innerHTML = `
-      <option value="Viên">${txt('unit_pill')}</option>
-      <option value="Vỉ">${txt('unit_strip')} (x${p.vienPerVi})</option>
-      <option value="Hộp">${txt('unit_box')} (x${p.vienPerVi * p.viPerHop})</option>
+      <option value="Viên">${'viên'}</option>
+      <option value="Vỉ">${'vỉ'} (x${p.vienPerVi})</option>
+      <option value="Hộp">${'hộp'} (x${p.vienPerVi * p.viPerHop})</option>
     `;
     select.value = "Viên";
   }
@@ -503,7 +469,7 @@ function renderAll(filtered) {
 
   const pagerDisplay = $("pagerDisplay");
   if (pagerDisplay) {
-    let pageInfo = txt('page_info');
+    let pageInfo = 'Trang {now} / {total}';
     pageInfo = pageInfo.replace('{now}', state.page).replace('{total}', totalPages);
     pagerDisplay.textContent = pageInfo;
   }
@@ -639,11 +605,7 @@ function bindEvents() {
     };
   }
 
-  // Language switcher
-  const langBtn = $("btnLang");
-  if (langBtn) {
-    langBtn.onclick = switchLanguage;
-  }
+
 }
 
 function syncFiltersFromUI() {
@@ -681,9 +643,7 @@ let isEventsBound = false;
 
 (async function init() {
   // 1. Initial UI Setup
-  updateLocale();
-
-  // 2. Instant Render from Cache (Stale-While-Revalidate)
+// 2. Instant Render from Cache (Stale-While-Revalidate)
   const cachedAuth = localStorage.getItem("cache_auth");
   const cachedProducts = localStorage.getItem("cache_products");
 
@@ -754,110 +714,6 @@ let isEventsBound = false;
   }
 })();
 
-// ═══════════════════════════════════════════════════════════════════
-//  🌐 LANGUAGE SWITCHER SYSTEM
-// ═══════════════════════════════════════════════════════════════════
-
-const TRANSLATIONS = {
-  vi: {
-    // Meta
-    app_title: "Github Pharmacy",
-    // Header
-    search_placeholder: "Tìm tên thuốc, mã thuốc...",
-    login_button: "Đăng nhập",
-    cart_button: "Giỏ hàng",
-    // Hero
-    hero_title: "Mua thuốc nhanh – tìm dễ – lọc chuẩn",
-    hero_subtitle: "Cập nhật trực tiếp từ hệ thống quản lý kho.",
-    hero_sale_button: "Xem Sale 🔥",
-    hero_all_button: "Xem toàn bộ",
-    pixel_card_foot: "Tư vấn tận tâm",
-    // Sections
-    sale_section_title: "Đang Sale",
-    sale_section_subtitle: "Các sản phẩm giảm giá hấp dẫn",
-    sale_empty: "Chưa có sản phẩm sale theo bộ lọc hiện tại.",
-    bestseller_section_title: "Best Seller",
-    bestseller_section_subtitle: "Sản phẩm được ưa chuộng nhất",
-    bestseller_empty: "Chưa có best seller theo bộ lọc hiện tại.",
-    all_products_section_title: "Tất cả sản phẩm",
-    all_empty: "Không có sản phẩm phù hợp bộ lọc.",
-    // Filters
-    filters_title: "Bộ lọc",
-    filter_keyword_label: "Từ khoá",
-    filter_keyword_placeholder: "Tên thuốc, mã, lô...",
-    filter_price_min_label: "Giá (min)",
-    filter_price_max_label: "Giá (max)",
-    filter_sort_label: "Sắp xếp",
-    sort_pop_desc: "Phổ biến ↓",
-    sort_price_asc: "Giá ↑",
-    sort_price_desc: "Giá ↓",
-    sort_date_desc: "Ngày nhập ↓",
-    sort_name_asc: "Tên A→Z",
-    filter_only_sale: "Chỉ hiện Sale",
-    filter_reset_button: "Reset",
-    filter_apply_button: "Áp dụng",
-    // Pager
-    pager_prev_button: "← Trước",
-    pager_page_label: "Trang",
-    pager_next_button: "Sau →",
-    // Modal
-    modal_unit_label: "Đơn vị tính",
-    modal_quantity_label: "Số lượng",
-    modal_cancel_button: "Huỷ",
-    modal_add_to_cart_button: "Thêm vào giỏ",
-    // Lang dropdown header
-    lang_current_label: "🌐 Tiếng Việt",
-  },
-  en: {
-    // Meta
-    app_title: "Github Pharmacy",
-    // Header
-    search_placeholder: "Search medicine name, code...",
-    login_button: "Login",
-    cart_button: "Cart",
-    // Hero
-    hero_title: "Buy fast – find easy – filter smart",
-    hero_subtitle: "Live updates from our inventory management system.",
-    hero_sale_button: "View Sale 🔥",
-    hero_all_button: "View all",
-    pixel_card_foot: "Dedicated consultation",
-    // Sections
-    sale_section_title: "On Sale",
-    sale_section_subtitle: "Attractive discounted products",
-    sale_empty: "No sale products matching current filters.",
-    bestseller_section_title: "Best Sellers",
-    bestseller_section_subtitle: "Most popular products",
-    bestseller_empty: "No best sellers matching current filters.",
-    all_products_section_title: "All Products",
-    all_empty: "No products match the current filters.",
-    // Filters
-    filters_title: "Filters",
-    filter_keyword_label: "Keyword",
-    filter_keyword_placeholder: "Medicine name, code, batch...",
-    filter_price_min_label: "Price (min)",
-    filter_price_max_label: "Price (max)",
-    filter_sort_label: "Sort by",
-    sort_pop_desc: "Popular ↓",
-    sort_price_asc: "Price ↑",
-    sort_price_desc: "Price ↓",
-    sort_date_desc: "Import Date ↓",
-    sort_name_asc: "Name A→Z",
-    filter_only_sale: "Sale items only",
-    filter_reset_button: "Reset",
-    filter_apply_button: "Apply",
-    // Pager
-    pager_prev_button: "← Prev",
-    pager_page_label: "Page",
-    pager_next_button: "Next →",
-    // Modal
-    modal_unit_label: "Unit",
-    modal_quantity_label: "Quantity",
-    modal_cancel_button: "Cancel",
-    modal_add_to_cart_button: "Add to cart",
-    // Lang dropdown header
-    lang_current_label: "🌐 English",
-  },
-};
 
 function applyLanguage(lang) {
   const t = TRANSLATIONS[lang];

@@ -43,21 +43,19 @@ public class RegisterServlet extends HttpServlet {
         c.setPassword(password);
         c.setRole("CUSTOMER");
 
-        // Gửi OTP
+        // Gửi OTP (Bất đồng bộ)
         String otp = core_app.util.EmailUtil.generateOTP();
-        boolean sent = core_app.util.EmailUtil.sendOTP(email, otp);
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            core_app.util.EmailUtil.sendOTP(email, otp);
+        });
 
-        if (sent) {
-            jakarta.servlet.http.HttpSession session = req.getSession();
-            session.setAttribute("pendingUser", c);
-            session.setAttribute("registrationOTP", otp);
-            session.setAttribute("otpTime", System.currentTimeMillis());
+        jakarta.servlet.http.HttpSession session = req.getSession();
+        session.setAttribute("pendingUser", c);
+        session.setAttribute("registrationOTP", otp);
+        session.setAttribute("otpTime", System.currentTimeMillis());
 
-            // Chuyển hướng sang trang nhập OTP
-            resp.sendRedirect("verify_otp.html");
-        } else {
-            resp.sendRedirect("register.html?error=mail_error");
-        }
+        // Chuyển hướng sang trang nhập OTP ngay lập tức
+        resp.sendRedirect("verify_otp.html");
     }
 
     private boolean isValidPassword(String p) {

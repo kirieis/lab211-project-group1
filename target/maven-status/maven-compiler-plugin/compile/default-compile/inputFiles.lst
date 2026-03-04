@@ -1,8 +1,9 @@
-C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\Data_Generator-Cleaner\DataCleaner.java
+C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\data_generator_cleaner\DataGenerator.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\model\MedicineGroup.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\AdminSalesServlet.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\SessionAuthServlet.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\filter\AuthFilter.java
+C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\data_generator_cleaner\DataCleaner.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\POSOrderServlet.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\util\DBConnection.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\model\Medicine.java
@@ -13,7 +14,6 @@ C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\dao\InvoiceDA
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\OrderServlet.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\OrderStatusServlet.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\dao\MedicineDAO.java
-C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\Data_Generator-Cleaner\DataGenerator.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\DashboardServlet.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\LoginServlet.java
 C:\Users\nguye\Documents\GitHub\lab211-project-group1\src\core_app\servlet\RegisterServlet.java
