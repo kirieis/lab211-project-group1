@@ -52,7 +52,12 @@ public class BatchDAO {
     public List<BatchInfo> getAvailableBatches(Connection conn, String medicineId) throws SQLException {
         List<BatchInfo> list = new ArrayList<>();
         String sql = """
-                SELECT batch_id, medicine_id, batch_number, expiry_date, quantity_available, import_price,
+                SELECT batch_id,
+                       medicine_id,
+                       batch_number,
+                       expiry_date,
+                       quantity_available,
+                       import_price,
                        DATEDIFF(DAY, CAST(GETDATE() AS DATE), expiry_date) AS days_left
                 FROM Batch
                 WHERE medicine_id = ?
