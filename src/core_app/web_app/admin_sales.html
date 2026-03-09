@@ -274,17 +274,17 @@
                                 
                                 <div style="text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
                                     ${order.status === 'PENDING' ? `
-                                        <button onclick="updateOrderStatus(${order.id}, 'CANCELLED')" 
+                                        <button class="btn-reject" data-order-id="${order.id}" data-status="CANCELLED"
                                             style="background: #ef4444; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 700; cursor: pointer;">
-                                            ❌ ${t('admin', 'btn_reject')}
+                                            ❌ Hủy
                                         </button>
-                                        <button onclick="updateOrderStatus(${order.id}, 'PAID')" 
+                                        <button class="btn-approve" data-order-id="${order.id}" data-status="PAID"
                                             style="background: #10b981; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 700; cursor: pointer;">
-                                            💰 ${t('admin', 'btn_approve')}
+                                            💰 Duyệt
                                         </button>
                                     ` : order.status === 'PAID' ?
-                        `<span style="color: #10b981; font-weight: 700; background: #ecfdf5; padding: 0.5rem 1rem; border-radius: 0.5rem;">✅ ${t('admin', 'status_paid')}</span>` :
-                        `<span style="color: #ef4444; font-weight: 700; background: #fef2f2; padding: 0.5rem 1rem; border-radius: 0.5rem;">🚫 ${t('admin', 'status_cancelled')}</span>`}
+                        `<span style="color: #10b981; font-weight: 700; background: #ecfdf5; padding: 0.5rem 1rem; border-radius: 0.5rem;">✅ Đã thanh toán</span>` :
+                        `<span style="color: #ef4444; font-weight: 700; background: #fef2f2; padding: 0.5rem 1rem; border-radius: 0.5rem;">🚫 Đã hủy</span>`}
                                 </div>
                             </div>
                         </td>
@@ -302,8 +302,21 @@
             row.classList.toggle('active');
         };
 
+        // Event delegation for approve/reject buttons
+        document.addEventListener('click', async (e) => {
+            if (e.target.classList && e.target.classList.contains('btn-approve')) {
+                const orderId = e.target.getAttribute('data-order-id');
+                const newStatus = e.target.getAttribute('data-status');
+                updateOrderStatus(parseInt(orderId), newStatus);
+            } else if (e.target.classList && e.target.classList.contains('btn-reject')) {
+                const orderId = e.target.getAttribute('data-order-id');
+                const newStatus = e.target.getAttribute('data-status');
+                updateOrderStatus(parseInt(orderId), newStatus);
+            }
+        });
+
         async function updateOrderStatus(orderId, newStatus) {
-            if (!confirm(t('admin', 'msg_confirm_approve'))) return;
+            if (!confirm(newStatus === 'PAID' ? 'Xác nhận duyệt đơn hàng này?' : 'Xác nhận hủy đơn hàng này?')) return;
 
             try {
                 const res = await fetch('../api/orders', {
@@ -313,15 +326,15 @@
                 });
 
                 if (res.ok) {
-                    alert(t('admin', 'msg_update_success'));
+                    alert(newStatus === 'PAID' ? 'Duyệt đơn hàng thành công!' : 'Hủy đơn hàng thành công!');
                     loadSales(); // Reload data
                 } else {
                     const err = await res.json();
-                    alert(t('admin', 'msg_update_error') + ': ' + err.message);
+                    alert('Lỗi: ' + (err.message || 'Không xác định'));
                 }
             } catch (e) {
                 console.error(e);
-                alert(t('admin', 'msg_update_error'));
+                alert('Lỗi kết nối server!');
             }
         }
 
